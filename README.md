@@ -30,3 +30,5 @@ python main.py
 ## Preview
 
 ![esp](https://github.com/GsDeluxe/cs2py/blob/main/cs2esp.jpg?raw=true)
+![esp_tab](https://github.com/GsDeluxe/cs2py/blob/main/esp_tab.png?raw=true)
+![triggerbot_tab](https://github.com/GsDeluxe/cs2py/blob/main/triggerbot_tab.png?raw=true)
