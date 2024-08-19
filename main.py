@@ -3,6 +3,7 @@ import pymem
 import time
 import threading
 import pyMeow as pme
+import pymem.exception
 from win32gui import GetWindowText, GetForegroundWindow
 import offsets
 import os
@@ -409,7 +410,13 @@ def main():
 
 		if GetWindowText(GetForegroundWindow()) == "Counter-Strike 2":
 
-			entities = get_entities_info(mem=memf, client_dll=client, screen_width=user32.GetSystemMetrics(0), screen_height=user32.GetSystemMetrics(1), offsets=offsets, team_check=team_check)
+			try:
+				entities = get_entities_info(mem=memf, client_dll=client, screen_width=user32.GetSystemMetrics(0), screen_height=user32.GetSystemMetrics(1), offsets=offsets, team_check=team_check)
+			except pymem.exception.MemoryReadError:
+				print("[-] Error Reading Game")
+				check_in_game(memf, client, offsets)
+				continue
+
 			for entity in entities:
 				if entity.Distance < 35:
 					continue
