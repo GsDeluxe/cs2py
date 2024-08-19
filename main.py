@@ -33,13 +33,13 @@ name_rendering: bool = True
 health_bar_rendering: bool = True
 health_text_rendering: bool = True
 
-enemy_color = "#ff0000"
-team_color = "#00FF00"
+enemy_color: str = "#ff0000"
+team_color: str = "#00FF00"
 
 mouse = Controller()
-enable_triggerbot = False
-triggerbot_key = "shift"
-triggerbot_team_check = False
+enable_triggerbot: bool = False
+triggerbot_key: str = "shift"
+triggerbot_team_check: bool = False
 
 def world_to_screen(view_matrix: Matrix, position: Vector3):
 	mat = view_matrix.matrix
@@ -328,13 +328,13 @@ def triggerbot_thread(memf, client, offsets):
 					entityTeam = memf.ReadInt(entity, m_iTeamNum)
 					playerTeam = memf.ReadInt(player, m_iTeamNum)
 
-				if not triggerbot_team_check or entityTeam != playerTeam:
-					entityHp = memf.ReadInt(entity, m_iHealth)
-					if entityHp > 0:
-						time.sleep(uniform(0.01, 0.03))
-						mouse.press(Button.left)
-						time.sleep(uniform(0.01, 0.05))
-						mouse.release(Button.left)					
+					if not triggerbot_team_check or entityTeam != playerTeam:
+						entityHp = memf.ReadInt(entity, m_iHealth)
+						if entityHp > 0:
+							time.sleep(uniform(0.01, 0.03))
+							mouse.press(Button.left)
+							time.sleep(uniform(0.01, 0.05))
+							mouse.release(Button.left)
 
 				time.sleep(0.03)
 			else:
@@ -343,6 +343,20 @@ def triggerbot_thread(memf, client, offsets):
 			break
 		except:
 			pass
+
+def check_in_game(memf, client, offsets):
+	game_not_in_memory = True
+	while True:
+		try:
+			get_entities_info(memf, client, user32.GetSystemMetrics(0), user32.GetSystemMetrics(1), offsets, False)
+			if game_not_in_memory:
+				print("[+] Game is in memory, proceeding...")
+			break
+		except pymem.exception.MemoryReadError:
+			if game_not_in_memory:
+				print("[*] Game not in memory. Waiting...")
+				game_not_in_memory = False 
+			time.sleep(1) 
 
 def main():
 	try:
@@ -353,6 +367,7 @@ def main():
 	
 	client = pymem.process.module_from_name(pm.process_handle, "client.dll").lpBaseOfDll
 	memf = memfunc(proc=pm)
+	
 	print("[*] Getting Offsets")
 	offsets = get_offsets()
 
@@ -360,6 +375,9 @@ def main():
 	threading.Thread(target=triggerbot_thread, args=(memf, client, offsets), daemon=True).start()
 
 	print("[+] GUI Initialized")
+
+	check_in_game(memf, client, offsets)
+
 	if not GetWindowText(GetForegroundWindow()) == "Counter-Strike 2":
 		print("[*] Change Window to CS2 to Show GUI")
 
@@ -391,7 +409,7 @@ def main():
 
 		if GetWindowText(GetForegroundWindow()) == "Counter-Strike 2":
 
-			entities = get_entities_info(mem=memf, client_dll=client, screen_width=1920, screen_height=1020, offsets=offsets, team_check=team_check)
+			entities = get_entities_info(mem=memf, client_dll=client, screen_width=user32.GetSystemMetrics(0), screen_height=user32.GetSystemMetrics(1), offsets=offsets, team_check=team_check)
 			for entity in entities:
 				if entity.Distance < 35:
 					continue
@@ -445,17 +463,16 @@ def GUI():
 	def on_closing():
 		os._exit(0)
 
-	def record_triggerbot_key():
-		def key_capture():
-			triggerbot_key_var.set("Press a key...")
+	def start_recording_key():
+		triggerbot_key_var.set("Press a key...")
+		keyboard.hook(on_key_event)
 
-			event = keyboard.read_event()
-			if event.event_type == keyboard.KEY_DOWN:
-
-				triggerbot_key = event.name
-				triggerbot_key_var.set(triggerbot_key)
-
-		threading.Thread(target=key_capture, daemon=True).start()
+	def on_key_event(event):
+		global triggerbot_key
+		if event.event_type == keyboard.KEY_DOWN:
+			triggerbot_key = event.name
+			triggerbot_key_var.set(f"Trigger Key: {triggerbot_key}")
+			keyboard.unhook_all()
 
 	root = ctk.CTk()
 	tabview = ctk.CTkTabview(root)
@@ -520,9 +537,11 @@ def GUI():
 													command=lambda: checkbox_action('triggerbot_team_check', triggerbot_team_check_var))
 	triggerbot_team_check_checkbox.pack(padx=10, pady=5, anchor="w")
 
-	triggerbot_key_var = StringVar(value=triggerbot_key)
-	triggerbot_key_button = ctk.CTkButton(master=tab_triggerbot, textvariable=triggerbot_key_var, width=200, command=record_triggerbot_key)
+	global triggerbot_key_var
+	triggerbot_key_var = StringVar(value=f"Trigger Key: {triggerbot_key}")
+	triggerbot_key_button = ctk.CTkButton(master=tab_triggerbot, textvariable=triggerbot_key_var, width=200, command=start_recording_key)
 	triggerbot_key_button.pack(padx=10, pady=5, anchor="w")
+
 
 	root.resizable(False, False)
 	root.title("cs2py")
