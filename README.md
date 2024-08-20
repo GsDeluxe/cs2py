@@ -23,9 +23,10 @@ python main.py
 
 - [x] ESP
 - [x] Triggerbot
+- [x] Anti Flashbang
+- [x] Auto Bhop
+- [x] FOV Changer
 - [ ] Aimbot
-  
-  
 
 ## Preview
 
