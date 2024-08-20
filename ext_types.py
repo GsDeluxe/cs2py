@@ -7,11 +7,13 @@ class Vector3:
     x: float
     y: float
     z: float
+    def __add__(self, other: 'Vector3') -> 'Vector3':return Vector3(x=self.x + other.x,y=self.y + other.y,z=self.z + other.z)
 
 @dataclass
 class Vector2:
     x: float
     y: float
+    def __add__(self, other: 'Vector2') -> 'Vector2': return Vector2(x=self.x + other.x,y=self.y + other.y)
 
 @dataclass
 class Rectangle:
@@ -44,6 +46,10 @@ class Offset:
     dwViewMatrix: int
     dwLocalPlayerPawn: int
     dwEntityList: int
+    dwLocalPlayerController: int
+
+    ButtonJump: int
+    
     m_hPlayerPawn: int
     m_iHealth: int
     m_lifeState: int
@@ -55,6 +61,11 @@ class Offset:
     m_nodeToWorld: int
     m_sSanitizedPlayerName: int
     m_iIDEntIndex: int
+    m_flFlashMaxAlpha: int
+    m_fFlags: int
+    m_iFOV: int
+    m_pCameraServices: int
+    m_bIsScoped: int
 
 @dataclass
 class Matrix:

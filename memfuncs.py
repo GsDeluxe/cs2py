@@ -113,7 +113,7 @@ class memfunc:
         return self.proc.write_string(address + offset, value)
 
     def WriteVec(self, address, value, offset=0):
-        bytes_ = struct.pack('fff', value.X, value.Y, value.Z)
+        bytes_ = struct.pack('fff', value.x, value.y, value.z)
         return self.WriteBytes(address + offset, bytes_)
 
 

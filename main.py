@@ -42,6 +42,12 @@ enable_triggerbot: bool = False
 triggerbot_key: str = "shift"
 triggerbot_team_check: bool = False
 
+anti_flashbang: bool = False
+enable_bhop: bool = False
+player_fov: int = 105
+fov_changer_option: bool = False
+
+
 def world_to_screen(view_matrix: Matrix, position: Vector3):
 	mat = view_matrix.matrix
 
@@ -72,6 +78,7 @@ def world_to_screen(view_matrix: Matrix, position: Vector3):
 	y -= 0.5 * screen_y * height_float + 0.5
 	
 	return x, y
+
 
 def get_entities_info(mem: memfunc, client_dll: int, screen_width: int, screen_height: int, offsets: Offset, team_check: bool) -> List[Entity]:
 	entities = []
@@ -247,7 +254,10 @@ def get_offsets() -> Offset:
 		dwViewMatrix=offsets.Client().offset("dwViewMatrix"),
 		dwLocalPlayerPawn=offsets.Client().offset("dwLocalPlayerPawn"),
 		dwEntityList=offsets.Client().offset("dwEntityList"),
+		dwLocalPlayerController=offsets.Client().offset("dwLocalPlayerController"),
 
+		ButtonJump=offsets.Client().button("jump"),
+		
 		m_hPlayerPawn=offsets.Client().get("CCSPlayerController", "m_hPlayerPawn"),
 		m_iHealth=offsets.Client().get("C_BaseEntity", "m_iHealth"),
 		m_lifeState=offsets.Client().get("C_BaseEntity", "m_lifeState"),
@@ -258,7 +268,12 @@ def get_offsets() -> Offset:
 		m_boneArray=128,
 		m_nodeToWorld=offsets.Client().get("CGameSceneNode", "m_nodeToWorld"),
 		m_sSanitizedPlayerName=offsets.Client().get("CCSPlayerController", "m_sSanitizedPlayerName"),
-		m_iIDEntIndex = offsets.Client().get("C_CSPlayerPawnBase", "m_iIDEntIndex"),
+		m_iIDEntIndex=offsets.Client().get("C_CSPlayerPawnBase", "m_iIDEntIndex"),
+		m_flFlashMaxAlpha=offsets.Client().get("C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
+		m_fFlags=offsets.Client().get("C_BaseEntity", "m_fFlags"),
+		m_iFOV=offsets.Client().get("CCSPlayerBase_CameraServices", "m_iFOV"),
+		m_pCameraServices=offsets.Client().get("C_BasePlayerPawn", "m_pCameraServices"),
+		m_bIsScoped=offsets.Client().get("C_CSPlayerPawn", "m_bIsScoped"),
 	)
 
 	return offsets_obj
@@ -305,12 +320,6 @@ def draw_bones(pme, bones, bone_connections, team):
 			pme.draw_line(bones[start_bone].x, bones[start_bone].y, bones[end_bone].x, bones[end_bone].y, color=pme.get_color(team_color if team == 3 else enemy_color), thick=2.0)
 
 def triggerbot_thread(memf, client, offsets):
-	dwEntityList = offsets.dwEntityList
-	dwLocalPlayerPawn = offsets.dwLocalPlayerPawn
-	m_iIDEntIndex = offsets.m_iIDEntIndex
-	m_iTeamNum = offsets.m_iTeamNum
-	m_iHealth = offsets.m_iHealth
-
 	while True:
 		try:
 			if not GetWindowText(GetForegroundWindow()) == "Counter-Strike 2" or enable_triggerbot == False:
@@ -318,24 +327,25 @@ def triggerbot_thread(memf, client, offsets):
 				continue
 
 			if keyboard.is_pressed(triggerbot_key):
-				player = memf.ReadPointer(client, dwLocalPlayerPawn)
-				entityId = memf.ReadInt(player, m_iIDEntIndex)
+				player = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
+				entityId = memf.ReadInt(player, offsets.m_iIDEntIndex)
 
 				if entityId > 0:
-					entList = memf.ReadPointer(client, dwEntityList)
+					entList = memf.ReadPointer(client, offsets.dwEntityList)
 					entEntry = memf.ReadPointer(entList, 0x8 * (entityId >> 9) + 0x10)
 					entity = memf.ReadPointer(entEntry, 120 * (entityId & 0x1FF))
 
-					entityTeam = memf.ReadInt(entity, m_iTeamNum)
-					playerTeam = memf.ReadInt(player, m_iTeamNum)
+					entityTeam = memf.ReadInt(entity, offsets.m_iTeamNum)
+					playerTeam = memf.ReadInt(player, offsets.m_iTeamNum)
 
 					if not triggerbot_team_check or entityTeam != playerTeam:
-						entityHp = memf.ReadInt(entity, m_iHealth)
+						entityHp = memf.ReadInt(entity, offsets.m_iHealth)
 						if entityHp > 0:
-							time.sleep(uniform(0.01, 0.03))
-							mouse.press(Button.left)
-							time.sleep(uniform(0.01, 0.05))
-							mouse.release(Button.left)
+							if not user32.GetAsyncKeyState(0x01) < 0:
+								time.sleep(uniform(0.01, 0.03))
+								mouse.press(Button.left)
+								time.sleep(uniform(0.01, 0.05))
+								mouse.release(Button.left)
 
 				time.sleep(0.03)
 			else:
@@ -345,6 +355,65 @@ def triggerbot_thread(memf, client, offsets):
 		except:
 			pass
 
+def anti_flash_thread(memf: memfunc, client, offsets):
+	while True:
+		time.sleep(0.1)
+
+		try:
+			if anti_flashbang:
+				player_pos = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
+				if player_pos:
+					memf.WriteFloat(player_pos, 0.0, offsets.m_flFlashMaxAlpha)
+			else:
+				memf.WriteFloat(player_pos, 255.0, offsets.m_flFlashMaxAlpha)
+		except KeyboardInterrupt:
+			break
+		except:
+			pass
+
+def bhop_thread(memf, client, offsets):
+	while True:
+		try:
+			entity_list = memf.ReadPointer(client, offsets.dwEntityList)
+			local_player = memf.ReadPointer(client, offsets.dwLocalPlayerController)
+			local_pawn = memf.ReadInt(local_player, offsets.m_hPlayerPawn)
+			list_entry2 = memf.ReadPointer(entity_list, 0x8 * ((local_pawn & 0x7FFF) >> 9) + 16)
+			local_player = memf.ReadPointer(list_entry2, 120 * (local_pawn & 0x1FF))
+
+			if local_player and enable_bhop:
+				flags = memf.ReadInt(local_player, offsets.m_fFlags)
+				if user32.GetAsyncKeyState(0x20) and flags & (1 << 0): # check space and if on ground
+					memf.WriteInt(client, 65537, offsets.ButtonJump)
+					time.sleep(0.1)
+					memf.WriteInt(client, 256, offsets.ButtonJump)
+			time.sleep(0.01)
+		except KeyboardInterrupt:
+			break
+		except Exception as e:
+			pass
+
+
+def fov_changer_thread(memf, client, offsets):
+    while True:
+        try:
+            local_player_p = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
+            camera_services = memf.ReadPointer(local_player_p, offsets.m_pCameraServices)
+            current_fov = memf.ReadInt(camera_services, offsets.m_iFOV)
+            is_scoped = memf.ReadBool(local_player_p, offsets.m_bIsScoped)
+
+            if fov_changer_option:
+                if not is_scoped and current_fov != player_fov:
+                    memf.WriteInt(camera_services, player_fov, offsets.m_iFOV)
+            else:
+                if current_fov != 105:
+                    memf.WriteInt(camera_services, 105, offsets.m_iFOV)
+                
+        except KeyboardInterrupt:
+            break
+        except:
+            pass
+        time.sleep(0.001)
+
 def check_in_game(memf, client, offsets):
 	game_not_in_memory = True
 	while True:
@@ -353,7 +422,7 @@ def check_in_game(memf, client, offsets):
 			if game_not_in_memory:
 				print("[+] Game is in memory, proceeding...")
 			break
-		except pymem.exception.MemoryReadError:
+		except pymem.exception.MemoryReadError as e:
 			if game_not_in_memory:
 				print("[*] Game not in memory. Waiting...")
 				game_not_in_memory = False 
@@ -374,6 +443,10 @@ def main():
 
 	threading.Thread(target=GUI, daemon=True).start()
 	threading.Thread(target=triggerbot_thread, args=(memf, client, offsets), daemon=True).start()
+	threading.Thread(target=anti_flash_thread, args=(memf, client, offsets), daemon=True).start()
+	threading.Thread(target=bhop_thread, args=(memf, client, offsets), daemon=True).start()
+	threading.Thread(target=fov_changer_thread, args=(memf, client, offsets), daemon=True).start()
+
 
 	print("[+] GUI Initialized")
 
@@ -474,6 +547,11 @@ def GUI():
 		triggerbot_key_var.set("Press a key...")
 		keyboard.hook(on_key_event)
 
+	def fov_slider_action(value):
+		global player_fov
+		player_fov = int(value)
+		fov_value_label.configure(text=f"FOV: {int(float(value))}")
+
 	def on_key_event(event):
 		global triggerbot_key
 		if event.event_type == keyboard.KEY_DOWN:
@@ -549,6 +627,29 @@ def GUI():
 	triggerbot_key_button = ctk.CTkButton(master=tab_triggerbot, textvariable=triggerbot_key_var, width=200, command=start_recording_key)
 	triggerbot_key_button.pack(padx=10, pady=5, anchor="w")
 
+	# Misc Tab
+	tab_misc = tabview.add("Misc")
+
+	anti_flashbang_var = ctk.BooleanVar(value=anti_flashbang)
+	anti_flashbang_checkbox = ctk.CTkCheckBox(master=tab_misc, text="Enable Anti Flashbang", variable=anti_flashbang_var,
+											  command=lambda: checkbox_action('anti_flashbang', anti_flashbang_var))
+	anti_flashbang_checkbox.pack(padx=10, pady=5, anchor="w")
+
+	enable_bhop_var = ctk.BooleanVar(value=enable_bhop)
+	enable_bhop_checkbox = ctk.CTkCheckBox(master=tab_misc, text="Enable Bhop", variable=enable_bhop_var,
+										command=lambda: checkbox_action('enable_bhop', enable_bhop_var))
+	enable_bhop_checkbox.pack(padx=10, pady=5, anchor="w")
+
+	fov_changer_var = ctk.BooleanVar(value=fov_changer_option)
+	fov_changer_checkbox = ctk.CTkCheckBox(master=tab_misc, text="Enable FOV Changer", variable=fov_changer_var,
+										  command=lambda: checkbox_action('fov_changer_option', fov_changer_var))
+	fov_changer_checkbox.pack(padx=10, pady=5, anchor="w")
+
+	fov_slider = ctk.CTkSlider(master=tab_misc, from_=30, to=170, number_of_steps=141, command=fov_slider_action)
+	fov_slider.pack(side="left", padx=(0, 10), pady=5) 
+
+	fov_value_label = ctk.CTkLabel(master=tab_misc,text=f"FOV: {int(fov_slider.get())}")
+	fov_value_label.pack(side="left", padx=(10, 0), pady=5)
 
 	root.resizable(False, False)
 	root.title("cs2py")
