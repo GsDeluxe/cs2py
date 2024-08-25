@@ -55,7 +55,7 @@ health_bar_rendering: bool = True
 health_text_rendering: bool = True
 
 t_color: str = "#8A2BE2"
-ct_color: str = "#8A2BE2"
+ct_color: str = "#39FF14"
 
 mouse = Controller()
 enable_triggerbot: bool = False
@@ -66,9 +66,10 @@ anti_flashbang: bool = False
 enable_bhop: bool = False
 player_fov: int = 105
 fov_changer_option: bool = False
-enable_bomb_timer: bool = True; bomb_time_left: int = -1; bombPlanted: bool = False
+enable_bomb_timer: bool = False; bomb_time_left: int = -1; bombPlanted: bool = False
 
-enable_aimbot: bool = True
+enable_aimbot: bool = False
+# aimbot_hotkey: ? = ?
 aimbot_team_check: bool = True
 visibility_check: bool = False
 enable_aimbot_fov: bool = False
@@ -315,7 +316,7 @@ def get_offsets() -> Offset:
 	return offsets_obj
 
 def draw_box(pme, rect_left, rect_top, rect_width, rect_height, team):
-	pme.draw_rectangle_lines(rect_left, rect_top, rect_width, rect_height, color=pme.get_color(t_color if team == 3 else ct_color), lineThick=1.0)
+	pme.draw_rectangle_lines(rect_left, rect_top, rect_width, rect_height, color=pme.get_color(t_color if team == 2 else ct_color), lineThick=1.0)
 
 def draw_name(pme, player_name, text_x, text_y):
 	if player_name:
@@ -348,12 +349,12 @@ def draw_health_text(pme, health, rect_left, rect_top, rect_height):
 
 def draw_tracer(pme, start_pos_x, start_pos_y, rect_center_x, rect_center_y, team):
 	if rect_center_y != -1:
-		pme.draw_line(start_pos_x, start_pos_y, rect_center_x, rect_center_y, color=pme.get_color(t_color if team == 3 else ct_color), thick=2.0)
+		pme.draw_line(start_pos_x, start_pos_y, rect_center_x, rect_center_y, color=pme.get_color(t_color if team == 2 else ct_color), thick=2.0)
 
 def draw_bones(pme, bones, bone_connections, team):
 	for start_bone, end_bone in bone_connections:
 		if start_bone in bones and end_bone in bones:
-			pme.draw_line(bones[start_bone].x, bones[start_bone].y, bones[end_bone].x, bones[end_bone].y, color=pme.get_color(t_color if team == 3 else ct_color), thick=2.0)
+			pme.draw_line(bones[start_bone].x, bones[start_bone].y, bones[end_bone].x, bones[end_bone].y, color=pme.get_color(t_color if team == 2 else ct_color), thick=2.0)
 
 def triggerbot_thread(memf, client, offsets):
 	while True:
