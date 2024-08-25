@@ -438,7 +438,7 @@ def fov_changer_thread(memf: memfunc, client, offsets):
 			is_scoped = memf.ReadBool(local_player_p, offsets.m_bIsScoped)
 
 			if fov_changer_option:
-				if not is_scoped:
+				if not is_scoped and current_fov != player_fov:
 					memf.WriteInt(camera_services, player_fov, offsets.m_iFOV)
 			else:
 				if current_fov != 105:
