@@ -447,7 +447,6 @@ def fov_changer_thread(memf: memfunc, client, offsets):
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			print(e)
 			pass
 		time.sleep(0.001)
 
@@ -730,32 +729,27 @@ def main():
 		pme.end_drawing()
 
 def GUI():
-	def team_pick_color():
-		color = AskColor().get()
-		global team_color
-		team_color = color
-		team_color_button.configure(fg_color=color)
-
-	def enemy_pick_color():
-		color = AskColor().get()
-		global enemy_color
-		enemy_color = color
-		enemy_color_button.configure(fg_color=color)
-
-	def checkbox_action(var_name, var):
-		globals()[var_name] = var.get()
-
 	def on_closing():
 		os._exit(0)
 
-	def start_recording_key():
-		triggerbot_key_var.set("Press a key...")
-		keyboard.hook(on_key_event)
+	def t_pick_color():
+		color = AskColor().get()
+		global t_color
+		if color:
+			t_color = color
+			update_color_display(t_color_display, color)
 
-	def fov_slider_action(value):
-		global player_fov
-		player_fov = int(value)
-		fov_value_label.configure(text=f"FOV: {int(float(value))}")
+	def ct_pick_color():
+		color = AskColor().get()
+		global ct_color
+		if color:
+			ct_color = color
+			update_color_display(ct_color_display, color)
+
+	def update_color_display(canvas, color):
+		canvas.delete("all") 
+		canvas.create_rectangle(0, 0, canvas.winfo_width(), canvas.winfo_height(), fill=color, outline=color)
+		canvas.update()
 
 	def on_key_event(event):
 		global triggerbot_key
@@ -763,102 +757,225 @@ def GUI():
 			triggerbot_key = event.name
 			triggerbot_key_var.set(f"Trigger Key: {triggerbot_key}")
 			keyboard.unhook_all()
+			
+	def start_recording_key():
+		triggerbot_key_var.set("Press a key...")
+		keyboard.hook(on_key_event)
+
+	def fov_slider_action(value):
+		global player_fov
+		player_fov = int(value)
+		fov_value_label.configure(text=f"FOV: {player_fov}")
+
+	def aimbot_fov_slider_action(value):
+		global aimbot_fov
+		aimbot_fov = float(value)
+		aimbot_fov_value_label.configure(text=f"Aimbot FOV: {aimbot_fov:.1f}")
+
+	def update_aim_position(value):
+		global aim_position
+		aim_position = bones.get(value)
+
+	def checkbox_action(var_name, var):
+		globals()[var_name] = var.get()
+
+	def open_url(url):
+		webbrowser.open(url)
+
+	def create_slider_with_label(parent, value, command, label_text, slider_from, slider_to, step):
+		frame = ctk.CTkFrame(master=parent, corner_radius=8, bg_color="#2e2e2e")
+		frame.pack(padx=10, pady=5, fill="x")
+
+		def slider_callback(new_value):
+			slider.set(new_value)
+			command(new_value)
+
+		slider = ctk.CTkSlider(
+			master=frame, from_=slider_from, to=slider_to, command=slider_callback,
+			bg_color="#2e2e2e", border_color="#444444", progress_color="#8A2BE2", 
+			button_color="#8A2BE2", button_hover_color="#6912BF"
+		)
+		slider.set(value)
+		slider.pack(side="left", fill="x", padx=(0, 10))
+
+		value_label = ctk.CTkLabel(master=frame, text=f"{label_text}: {value:.1f}", font=("Segoe UI", 12), text_color="#FFFFFF")
+		value_label.pack(side="left", padx=(10, 0), anchor="w")
+
+		value_label.configure(width=120)
+
+		return slider, value_label
 
 	root = ctk.CTk()
-	tabview = ctk.CTkTabview(root)
+	root.title("cs2py")
+	root.iconbitmap("cs2py.ico")
+	root.attributes("-topmost", True)
+	root.resizable(False, False)
+	root.protocol("WM_DELETE_WINDOW", on_closing)
+	root.attributes("-alpha", 0.96)
+
+	root.configure(bg="#2e2e2e")
+	
+	gradient_frame = ctk.CTkFrame(root, corner_radius=0, bg_color="#2e2e2e")
+	gradient_frame.pack(padx=10, pady=10, expand=True, fill="both")
+	
+	tabview = ctk.CTkTabview(gradient_frame, segmented_button_selected_color="#8A2BE2", segmented_button_selected_hover_color="#8A2BE2")
 	tabview.pack(padx=10, pady=10, expand=True, fill="both")
 
-	# ESP Tab
 	tab_main = tabview.add("ESP")
+	tab_triggerbot = tabview.add("Triggerbot")
+	tab_aimbot = tabview.add("Aimbot")
+	tab_misc = tabview.add("Misc")
+
+	def create_checkbox_with_outline(parent, text, variable, command):
+		frame = ctk.CTkFrame(master=parent, corner_radius=8, bg_color="#2e2e2e", border_color="#444444", border_width=2)
+		frame.pack(padx=10, pady=5, anchor="w", fill="x")
+
+		checkbox = ctk.CTkCheckBox(master=frame, text=text, variable=variable, command=command, **neon_checkbox_style())
+		checkbox.pack(padx=10, pady=5, anchor="w")
+
+		return checkbox
+
+	def neon_checkbox_style():
+		return {
+			"font": ("Segoe UI", 12),
+			"text_color": "#FFFFFF",
+			"fg_color": "#333333",
+			"border_color": "#8A2BE2",
+			"checkmark_color": "#8A2BE2",
+			"hover_color": "#8A2BE2",
+			"border_width": 2
+		}
 
 	checkbox_1_var = ctk.BooleanVar(value=skeleton_rendering)
-	checkbox_1 = ctk.CTkCheckBox(master=tab_main, text="Skeleton Rendering", variable=checkbox_1_var,
-								 command=lambda: checkbox_action('skeleton_rendering', checkbox_1_var))
-	checkbox_1.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Skeleton Rendering", checkbox_1_var, lambda: checkbox_action('skeleton_rendering', checkbox_1_var))
 
 	checkbox_2_var = ctk.BooleanVar(value=box_rendering)
-	checkbox_2 = ctk.CTkCheckBox(master=tab_main, text="Box Rendering", variable=checkbox_2_var,
-								 command=lambda: checkbox_action('box_rendering', checkbox_2_var))
-	checkbox_2.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Box Rendering", checkbox_2_var, lambda: checkbox_action('box_rendering', checkbox_2_var))
 
 	checkbox_3_var = ctk.BooleanVar(value=tracer_rendering)
-	checkbox_3 = ctk.CTkCheckBox(master=tab_main, text="Tracer Rendering", variable=checkbox_3_var,
-								 command=lambda: checkbox_action('tracer_rendering', checkbox_3_var))
-	checkbox_3.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Tracer Rendering", checkbox_3_var, lambda: checkbox_action('tracer_rendering', checkbox_3_var))
 
 	checkbox_4_var = ctk.BooleanVar(value=name_rendering)
-	checkbox_4 = ctk.CTkCheckBox(master=tab_main, text="Name Rendering", variable=checkbox_4_var,
-								 command=lambda: checkbox_action('name_rendering', checkbox_4_var))
-	checkbox_4.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Name Rendering", checkbox_4_var, lambda: checkbox_action('name_rendering', checkbox_4_var))
 
 	checkbox_5_var = ctk.BooleanVar(value=health_bar_rendering)
-	checkbox_5 = ctk.CTkCheckBox(master=tab_main, text="Health Bar Rendering", variable=checkbox_5_var,
-								 command=lambda: checkbox_action('health_bar_rendering', checkbox_5_var))
-	checkbox_5.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Health Bar Rendering", checkbox_5_var, lambda: checkbox_action('health_bar_rendering', checkbox_5_var))
 
 	checkbox_6_var = ctk.BooleanVar(value=health_text_rendering)
-	checkbox_6 = ctk.CTkCheckBox(master=tab_main, text="Health Text Rendering", variable=checkbox_6_var,
-								 command=lambda: checkbox_action('health_text_rendering', checkbox_6_var))
-	checkbox_6.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Health Text Rendering", checkbox_6_var, lambda: checkbox_action('health_text_rendering', checkbox_6_var))
 
 	checkbox_7_var = ctk.BooleanVar(value=team_check)
-	checkbox_7 = ctk.CTkCheckBox(master=tab_main, text="Team Check", variable=checkbox_7_var,
-								 command=lambda: checkbox_action('team_check', checkbox_7_var))
-	checkbox_7.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_main, "Team Check", checkbox_7_var, lambda: checkbox_action('team_check', checkbox_7_var))
 
-	global enemy_color_button
-	enemy_color_button = ctk.CTkButton(master=tab_main, text="Choose Terrorist Color", command=enemy_pick_color, fg_color=enemy_color, width=300)
-	enemy_color_button.pack(padx=30, pady=10, anchor="w")
+	color_frame_width = 200
 
-	global team_color_button
-	team_color_button = ctk.CTkButton(master=tab_main, text="Choose Counter Terrorist Color", command=team_pick_color, fg_color=team_color, width=300)
-	team_color_button.pack(padx=30, pady=10, anchor="w")
+	def create_color_display_frame(parent, color):
+		canvas = ctk.CTkCanvas(master=parent, width=30, height=30, highlightthickness=0, bg="#8A2BE2")
+		update_color_display(canvas, color)
+		return canvas
 
-	# Triggerbot Tab
-	tab_triggerbot = tabview.add("Triggerbot")
+	t_color_frame = ctk.CTkFrame(master=tab_main, corner_radius=8, bg_color="#2e2e2e", border_color="#444444", border_width=2)
+	t_color_frame.pack(padx=30, pady=10, anchor="w", fill="x")
+
+	t_color_display = create_color_display_frame(t_color_frame, t_color)
+	t_color_display.pack(side="left", padx=5, pady=5)
+
+	t_color_button = ctk.CTkButton(master=t_color_frame, text="Terrorist Color", width=color_frame_width, 
+									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
+									  bg_color="#2e2e2e", font=("Segoe UI", 12), text_color="#FFFFFF", 
+									  border_color="#8A2BE2", border_width=2, command=t_pick_color)
+	t_color_button.pack(side="left", padx=5, pady=5)
+
+	ct_color_frame = ctk.CTkFrame(master=tab_main, corner_radius=8, bg_color="#2e2e2e", border_color="#444444", border_width=2)
+	ct_color_frame.pack(padx=30, pady=10, anchor="w", fill="x")
+
+	ct_color_display = create_color_display_frame(ct_color_frame, ct_color)
+	ct_color_display.pack(side="left", padx=5, pady=5)
+
+	ct_color_button = ctk.CTkButton(master=ct_color_frame, text="Counter Terrorist Color", width=color_frame_width, 
+									 fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
+									 bg_color="#2e2e2e", font=("Segoe UI", 12), text_color="#FFFFFF", 
+									 border_color="#8A2BE2", border_width=2, command=ct_pick_color)
+	ct_color_button.pack(side="left", padx=5, pady=5)
 
 	triggerbot_enable_var = ctk.BooleanVar(value=enable_triggerbot)
-	triggerbot_checkbox = ctk.CTkCheckBox(master=tab_triggerbot, text="Enable Triggerbot", variable=triggerbot_enable_var,
-										  command=lambda: checkbox_action('enable_triggerbot', triggerbot_enable_var))
-	triggerbot_checkbox.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_triggerbot, "Enable Triggerbot", triggerbot_enable_var, lambda: checkbox_action('enable_triggerbot', triggerbot_enable_var))
 
 	triggerbot_team_check_var = ctk.BooleanVar(value=triggerbot_team_check)
-	triggerbot_team_check_checkbox = ctk.CTkCheckBox(master=tab_triggerbot, text="Enable Team Check", variable=triggerbot_team_check_var,
-													command=lambda: checkbox_action('triggerbot_team_check', triggerbot_team_check_var))
-	triggerbot_team_check_checkbox.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_triggerbot, "Enable Team Check", triggerbot_team_check_var, lambda: checkbox_action('triggerbot_team_check', triggerbot_team_check_var))
 
 	global triggerbot_key_var
 	triggerbot_key_var = StringVar(value=f"Trigger Key: {triggerbot_key}")
-	triggerbot_key_button = ctk.CTkButton(master=tab_triggerbot, textvariable=triggerbot_key_var, width=200, command=start_recording_key)
-	triggerbot_key_button.pack(padx=10, pady=5, anchor="w")
+	triggerbot_key_button = ctk.CTkButton(master=tab_triggerbot, textvariable=triggerbot_key_var, width=200, 
+										 fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
+										 bg_color="#2e2e2e", font=("Segoe UI", 12), text_color="#FFFFFF", 
+										 border_color="#8A2BE2", border_width=2, command=start_recording_key)
+	triggerbot_key_button.pack(padx=10, pady=10)
 
-	# Misc Tab
-	tab_misc = tabview.add("Misc")
+	enable_aimbot_var = ctk.BooleanVar(value=enable_aimbot)
+	create_checkbox_with_outline(tab_aimbot, "Enable Aimbot", enable_aimbot_var, lambda: checkbox_action('enable_aimbot', enable_aimbot_var))
+
+	#recoil_control_var = ctk.BooleanVar(value=recoil_control)
+	#create_checkbox_with_outline(tab_aimbot, "Recoil Control", recoil_control_var, lambda: checkbox_action('recoil_control', recoil_control_var))
+
+	aimbot_fov_var = ctk.BooleanVar(value=enable_aimbot_fov)
+	create_checkbox_with_outline(tab_aimbot, "Enable Fov", aimbot_fov_var, lambda: checkbox_action('enable_aimbot_fov', aimbot_fov_var))
+
+	aimbot_team_check_var = ctk.BooleanVar(value=aimbot_team_check)
+	create_checkbox_with_outline(tab_aimbot, "Enable Team Check", aimbot_team_check_var, lambda: checkbox_action('aimbot_team_check', aimbot_team_check_var))
+
+	visibility_check_var = ctk.BooleanVar(value=False)
+	visibility_check = create_checkbox_with_outline(tab_aimbot, "Visibility Check", visibility_check_var, lambda: checkbox_action('visibility_check', visibility_check_var))
+	visibility_check.pack(padx=10, pady=5, anchor="w", fill="x")
+
+	optionmenu_var = ctk.StringVar(value="head")
+	optionmenu =  ctk.CTkOptionMenu(
+		tab_aimbot,
+		fg_color="#6A0D91", button_color="#8A2BE2", button_hover_color="#6912BF", dropdown_fg_color="#2e2e2e", dropdown_hover_color="#6912BF", dropdown_font=("Segoe UI", 12), dropdown_text_color="#ffffff",
+		values=list(bones.keys()),
+		variable=optionmenu_var,
+		command=update_aim_position
+	)
+	optionmenu.pack(padx=10, pady=5, anchor="w", fill="x")
+
+	aimbot_fov_slider, aimbot_fov_value_label = create_slider_with_label(tab_aimbot, aimbot_fov, aimbot_fov_slider_action, "Aimbot FOV", 0, 800, 1)
+	# smoothness_slider, smoothness_value_label = create_slider_with_label(tab_aimbot, aimbot_smoothness, smoothness_slider_action, "Smoothness", 0, 10, 0.1)
 
 	anti_flashbang_var = ctk.BooleanVar(value=anti_flashbang)
-	anti_flashbang_checkbox = ctk.CTkCheckBox(master=tab_misc, text="Enable Anti Flashbang", variable=anti_flashbang_var,
-											  command=lambda: checkbox_action('anti_flashbang', anti_flashbang_var))
-	anti_flashbang_checkbox.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_misc, "Enable Anti Flashbang", anti_flashbang_var, lambda: checkbox_action('anti_flashbang', anti_flashbang_var))
 
 	enable_bhop_var = ctk.BooleanVar(value=enable_bhop)
-	enable_bhop_checkbox = ctk.CTkCheckBox(master=tab_misc, text="Enable Bhop", variable=enable_bhop_var,
-										command=lambda: checkbox_action('enable_bhop', enable_bhop_var))
-	enable_bhop_checkbox.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_misc, "Enable Bhop", enable_bhop_var, lambda: checkbox_action('enable_bhop', enable_bhop_var))
+
+	enable_bomb_timer_var = ctk.BooleanVar(value=enable_bomb_timer)
+	create_checkbox_with_outline(tab_misc, "Enable Bomb Timer", enable_bomb_timer_var, lambda: checkbox_action('enable_bomb_timer', enable_bomb_timer_var))
 
 	fov_changer_var = ctk.BooleanVar(value=fov_changer_option)
-	fov_changer_checkbox = ctk.CTkCheckBox(master=tab_misc, text="Enable FOV Changer", variable=fov_changer_var,
-										  command=lambda: checkbox_action('fov_changer_option', fov_changer_var))
-	fov_changer_checkbox.pack(padx=10, pady=5, anchor="w")
+	create_checkbox_with_outline(tab_misc, "Enable FOV Changer", fov_changer_var, lambda: checkbox_action('fov_changer_option', fov_changer_var))
 
-	fov_slider = ctk.CTkSlider(master=tab_misc, from_=30, to=170, number_of_steps=141, command=fov_slider_action)
-	fov_slider.pack(side="left", padx=(0, 10), pady=5) 
+	fov_slider, fov_value_label = create_slider_with_label(tab_misc, player_fov, fov_slider_action, "FOV", 30, 170, 1)
 
-	fov_value_label = ctk.CTkLabel(master=tab_misc,text=f"FOV: {int(fov_slider.get())}")
-	fov_value_label.pack(side="left", padx=(10, 0), pady=5)
+	def open_github():
+		open_url("https://github.com/GsDeluxe/cs2py")
 
-	root.resizable(False, False)
-	root.title("cs2py")
-	root.protocol("WM_DELETE_WINDOW", on_closing)
+	github_button = ctk.CTkButton(master=tab_misc, text="GitHub", width=100, 
+								 fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
+								 bg_color="#2e2e2e", font=("Segoe UI", 11), text_color="#FFFFFF", 
+								 border_color="#8A2BE2", border_width=2, command=open_github)
+	github_button.pack(side="left", padx=8, pady=10)
+
+	load_config_button = ctk.CTkButton(master=tab_misc, text="Soon", width=100, 
+									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
+									  bg_color="#2e2e2e", font=("Segoe UI", 11), text_color="#FFFFFF", 
+									  border_color="#8A2BE2", border_width=2)
+	load_config_button.pack(side="left", padx=8, pady=10)
+
+	save_config_button = ctk.CTkButton(master=tab_misc, text="Soon", width=100, 
+									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
+									  bg_color="#2e2e2e", font=("Segoe UI", 11), text_color="#FFFFFF", 
+									  border_color="#8A2BE2", border_width=2)
+	save_config_button.pack(side="left", padx=8, pady=10)
+
 	root.mainloop()
 
 if __name__ == "__main__":
