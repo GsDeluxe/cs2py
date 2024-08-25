@@ -14,6 +14,7 @@ from pynput.mouse import Controller, Button
 import customtkinter as ctk
 from tkinter import BooleanVar, StringVar
 from CTkColorPicker import AskColor
+import webbrowser
 
 from ext_types import * 
 from memfuncs import memfunc
@@ -25,6 +26,25 @@ kernel32 = ctypes.WinDLL('kernel32')
 kernel32.ReadProcessMemory.argtypes = [ctypes.wintypes.HANDLE,ctypes.wintypes.LPCVOID,ctypes.wintypes.LPVOID,ctypes.wintypes.SIZE,ctypes.POINTER(ctypes.wintypes.SIZE)]
 kernel32.ReadProcessMemory.restype = ctypes.wintypes.BOOL
 
+bones = {
+	"head": 6,
+	"neck_0": 5,
+	"spine_1": 4,
+	"spine_2": 2,
+	"pelvis": 0,
+	"arm_upper_L": 8,
+	"arm_lower_L": 9,
+	"hand_L": 10,
+	"arm_upper_R": 13,
+	"arm_lower_R": 14,
+	"hand_R": 15,
+	"leg_upper_L": 22,
+	"leg_lower_L": 23,
+	"ankle_L": 24,
+	"leg_upper_R": 25,
+	"leg_lower_R": 26,
+	"ankle_R": 27,
+	}
 
 team_check: bool = False
 skeleton_rendering: bool = True
@@ -34,8 +54,8 @@ name_rendering: bool = True
 health_bar_rendering: bool = True
 health_text_rendering: bool = True
 
-enemy_color: str = "#ff0000"
-team_color: str = "#00FF00"
+t_color: str = "#8A2BE2"
+ct_color: str = "#8A2BE2"
 
 mouse = Controller()
 enable_triggerbot: bool = False
@@ -46,7 +66,15 @@ anti_flashbang: bool = False
 enable_bhop: bool = False
 player_fov: int = 105
 fov_changer_option: bool = False
+enable_bomb_timer: bool = True; bomb_time_left: int = -1; bombPlanted: bool = False
 
+enable_aimbot: bool = True
+aimbot_team_check: bool = True
+visibility_check: bool = False
+enable_aimbot_fov: bool = False
+aimbot_fov: float = 400
+aimbot_smoothness: float = 2.0
+aim_position = bones["head"]
 
 def world_to_screen(view_matrix: Matrix, position: Vector3):
 	mat = view_matrix.matrix
@@ -79,6 +107,19 @@ def world_to_screen(view_matrix: Matrix, position: Vector3):
 	
 	return x, y
 
+def calculate_angles(from_: Vector3, to: Vector3) -> Vector2:
+	yaw = 0.0
+	pitch = 0.0
+
+	deltaX = to.x - from_.x
+	deltaY = to.y - from_.y
+	deltaZ = to.z - from_.z
+
+	yaw = math.atan2(deltaY, deltaX) * 180 / math.pi
+	distance = math.sqrt(math.pow(deltaX,2) + math.pow(deltaY, 2))
+	pitch = -(math.atan2(deltaZ, distance) * 180 / math.pi)
+
+	return Vector2(yaw, pitch)
 
 def get_entities_info(mem: memfunc, client_dll: int, screen_width: int, screen_height: int, offsets: Offset, team_check: bool) -> List[Entity]:
 	entities = []
@@ -104,26 +145,6 @@ def get_entities_info(mem: memfunc, client_dll: int, screen_width: int, screen_h
 		[view_matrix_flat[8], view_matrix_flat[9], view_matrix_flat[10], view_matrix_flat[11]],
 		[view_matrix_flat[12], view_matrix_flat[13], view_matrix_flat[14], view_matrix_flat[15]]])
 
-	bones = {
-		"head": 6,
-		"neck_0": 5,
-		"spine_1": 4,
-		"spine_2": 2,
-		"pelvis": 0,
-		"arm_upper_L": 8,
-		"arm_lower_L": 9,
-		"hand_L": 10,
-		"arm_upper_R": 13,
-		"arm_lower_R": 14,
-		"hand_R": 15,
-		"leg_upper_L": 22,
-		"leg_lower_L": 23,
-		"ankle_L": 24,
-		"leg_upper_R": 25,
-		"leg_lower_R": 26,
-		"ankle_R": 27,
-	}
-
 	for i in range(64):
 		temp_entity = Entity(
 			Health=0,
@@ -134,7 +155,15 @@ def get_entities_info(mem: memfunc, client_dll: int, screen_width: int, screen_h
 			HeadPos=Vector3(0, 0, 0),
 			Distance=0,
 			Rect=Rectangle(0, 0, 0, 0),
-			OnScreen=False
+			OnScreen=False,
+			pawnAddress=None,
+			controllerAddress=None,
+			origin=None,
+			lifestate=None,
+			distance=None,
+			head2d=None,
+			pixelDistance=None,
+			view=None
 		)
 		entity_bones = {}
 
@@ -255,6 +284,8 @@ def get_offsets() -> Offset:
 		dwLocalPlayerPawn=offsets.Client().offset("dwLocalPlayerPawn"),
 		dwEntityList=offsets.Client().offset("dwEntityList"),
 		dwLocalPlayerController=offsets.Client().offset("dwLocalPlayerController"),
+		dwViewAngles = offsets.Client().offset("dwViewAngles"),
+		dwGameRules = offsets.Client().offset("dwGameRules"),
 
 		ButtonJump=offsets.Client().button("jump"),
 		
@@ -274,12 +305,17 @@ def get_offsets() -> Offset:
 		m_iFOV=offsets.Client().get("CCSPlayerBase_CameraServices", "m_iFOV"),
 		m_pCameraServices=offsets.Client().get("C_BasePlayerPawn", "m_pCameraServices"),
 		m_bIsScoped=offsets.Client().get("C_CSPlayerPawn", "m_bIsScoped"),
+		m_vecViewOffset = offsets.Client().get("C_BaseModelEntity", "m_vecViewOffset"),
+		m_entitySpottedState = offsets.Client().get("C_CSPlayerPawn", "m_entitySpottedState"),
+		m_bSpotted = offsets.Client().get("EntitySpottedState_t", "m_bSpotted"),
+		m_bBombPlanted = offsets.Client().get("C_CSGameRules", "m_bBombPlanted"),
+
 	)
 
 	return offsets_obj
 
 def draw_box(pme, rect_left, rect_top, rect_width, rect_height, team):
-	pme.draw_rectangle_lines(rect_left, rect_top, rect_width, rect_height, color=pme.get_color(team_color if team == 3 else enemy_color), lineThick=1.0)
+	pme.draw_rectangle_lines(rect_left, rect_top, rect_width, rect_height, color=pme.get_color(t_color if team == 3 else ct_color), lineThick=1.0)
 
 def draw_name(pme, player_name, text_x, text_y):
 	if player_name:
@@ -312,12 +348,12 @@ def draw_health_text(pme, health, rect_left, rect_top, rect_height):
 
 def draw_tracer(pme, start_pos_x, start_pos_y, rect_center_x, rect_center_y, team):
 	if rect_center_y != -1:
-		pme.draw_line(start_pos_x, start_pos_y, rect_center_x, rect_center_y, color=pme.get_color(team_color if team == 3 else enemy_color), thick=2.0)
+		pme.draw_line(start_pos_x, start_pos_y, rect_center_x, rect_center_y, color=pme.get_color(t_color if team == 3 else ct_color), thick=2.0)
 
 def draw_bones(pme, bones, bone_connections, team):
 	for start_bone, end_bone in bone_connections:
 		if start_bone in bones and end_bone in bones:
-			pme.draw_line(bones[start_bone].x, bones[start_bone].y, bones[end_bone].x, bones[end_bone].y, color=pme.get_color(team_color if team == 3 else enemy_color), thick=2.0)
+			pme.draw_line(bones[start_bone].x, bones[start_bone].y, bones[end_bone].x, bones[end_bone].y, color=pme.get_color(t_color if team == 3 else ct_color), thick=2.0)
 
 def triggerbot_thread(memf, client, offsets):
 	while True:
@@ -393,26 +429,27 @@ def bhop_thread(memf, client, offsets):
 			pass
 
 
-def fov_changer_thread(memf, client, offsets):
-    while True:
-        try:
-            local_player_p = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
-            camera_services = memf.ReadPointer(local_player_p, offsets.m_pCameraServices)
-            current_fov = memf.ReadInt(camera_services, offsets.m_iFOV)
-            is_scoped = memf.ReadBool(local_player_p, offsets.m_bIsScoped)
+def fov_changer_thread(memf: memfunc, client, offsets):
+	while True:
+		try:
+			local_player_p = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
+			camera_services = memf.ReadPointer(local_player_p, offsets.m_pCameraServices)
+			current_fov = memf.ReadInt(camera_services, offsets.m_iFOV)
+			is_scoped = memf.ReadBool(local_player_p, offsets.m_bIsScoped)
 
-            if fov_changer_option:
-                if not is_scoped and current_fov != player_fov:
-                    memf.WriteInt(camera_services, player_fov, offsets.m_iFOV)
-            else:
-                if current_fov != 105:
-                    memf.WriteInt(camera_services, 105, offsets.m_iFOV)
-                
-        except KeyboardInterrupt:
-            break
-        except:
-            pass
-        time.sleep(0.001)
+			if fov_changer_option:
+				if not is_scoped:
+					memf.WriteInt(camera_services, player_fov, offsets.m_iFOV)
+			else:
+				if current_fov != 105:
+					memf.WriteInt(camera_services, 105, offsets.m_iFOV)
+				
+		except KeyboardInterrupt:
+			break
+		except Exception as e:
+			print(e)
+			pass
+		time.sleep(0.001)
 
 def check_in_game(memf, client, offsets):
 	game_not_in_memory = True
@@ -427,6 +464,150 @@ def check_in_game(memf, client, offsets):
 				print("[*] Game not in memory. Waiting...")
 				game_not_in_memory = False 
 			time.sleep(1) 
+
+def bomb_timer_thread(memf: memfunc, client, offsets: Offset):
+	global bomb_time_left, bombPlanted
+
+	while True:
+		gameRule = memf.ReadPointer(client, offsets.dwGameRules)
+		if gameRule:
+			bombPlanted = memf.ReadBool(gameRule, offsets.m_bBombPlanted)
+			if bombPlanted:
+				for i in range(40):
+					bombPlanted = memf.ReadBool(gameRule, offsets.m_bBombPlanted)
+					if not bombPlanted:
+						break
+
+					bomb_time_left = 40 - i
+					time.sleep(1)
+			else:
+				bomb_time_left = -1
+				bombPlanted = False
+		time.sleep(0.01)
+
+def aimbot_thread(memf, client, offsets):
+	entities = []
+	localPlayer = Entity(
+		Health=0,
+		Team=0,
+		Name="",
+		Position=Vector2(0, 0),
+		Bones={},
+		HeadPos=Vector3(0, 0, 0),
+		Distance=0,
+		Rect=Rectangle(0, 0, 0, 0),
+		OnScreen=False,
+		pawnAddress=None,
+		controllerAddress=None,
+		origin=None,
+		lifestate=None,
+		distance=None,
+		head2d=None,
+		pixelDistance=None,
+		view=None
+	)
+	while True:
+		try:
+			entities.clear()
+			entityList = memf.ReadPointer(client, offsets.dwEntityList)
+
+			localPlayer.pawnAddress = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
+			localPlayer.team = memf.ReadInt(localPlayer.pawnAddress, offsets.m_iTeamNum)
+			localPlayer.origin = memf.ReadVec(localPlayer.pawnAddress, offsets.m_vOldOrigin)
+			localPlayer.view = memf.ReadVec(localPlayer.pawnAddress, offsets.m_vecViewOffset)
+			localPlayer.HeadPos = None
+			localPlayer.head2d = None
+
+			for i in range(64): 
+				ListEntry = memf.ReadPointer(entityList, (8 * (i & 0x7FFF) >> 9) + 16)
+
+				if not ListEntry: continue
+
+				currentController = memf.ReadPointer(ListEntry, 120 * (i & 0x1FF))
+				if not currentController: continue
+
+				pawnHandle = memf.ReadInt(currentController, offsets.m_hPlayerPawn)
+				if not pawnHandle: continue
+
+				listEntry2 = memf.ReadPointer(entityList, 0x8 * ((pawnHandle & 0x7FFF) >> 9) + 0x10)
+				
+				currentPawn = memf.ReadPointer(listEntry2, 0x78 * (pawnHandle & 0x1FF))
+				if not currentPawn or currentPawn == localPlayer.pawnAddress: continue
+
+				sceneNode = memf.ReadPointer(currentPawn, offsets.m_pGameSceneNode)
+				boneMatrix = memf.ReadPointer(sceneNode, offsets.m_modelState + 0x80)
+
+				health = memf.ReadInt(currentPawn, offsets.m_iHealth)
+				team = memf.ReadInt(currentPawn, offsets.m_iTeamNum)
+				lifestate = memf.ReadUInt(currentPawn, offsets.m_lifeState)
+				spotted = memf.ReadBool(currentPawn, offsets.m_entitySpottedState + offsets.m_bSpotted)
+
+				if visibility_check and not spotted:
+					continue
+
+				if lifestate != 256:
+					continue
+
+				if aimbot_team_check and localPlayer.team == team:
+					continue
+
+				temp_entity = Entity(
+					Health=0,
+					Team=0,
+					Name="",
+					Position=Vector2(0, 0),
+					Bones={},
+					HeadPos=Vector3(0, 0, 0),
+					Distance=0,
+					Rect=Rectangle(0, 0, 0, 0),
+					OnScreen=False,
+					pawnAddress=None,
+					controllerAddress=None,
+					origin=None,
+					lifestate=None,
+					distance=None,
+					head2d=None,
+					pixelDistance=None,
+					view=None
+				)
+				temp_entity.pawnAddress = currentPawn
+				temp_entity.controllerAddress = currentController
+				temp_entity.health = health
+				temp_entity.lifestate = lifestate
+				temp_entity.team = team
+				temp_entity.origin = memf.ReadVec(currentPawn, offsets.m_vOldOrigin)
+				temp_entity.view = memf.ReadVec(currentPawn, offsets.m_vecViewOffset)
+				temp_entity.distance = distance_vec3(temp_entity.origin, localPlayer.origin)
+				temp_entity.head = memf.ReadVec(boneMatrix, aim_position * 32) # 6 is the head id in the bone matrix and 32 is the step
+				
+				view_matrix_flat = memf.ReadMatrix(client + offsets.dwViewMatrix)
+				viewMatrix = Matrix([
+					[view_matrix_flat[0], view_matrix_flat[1], view_matrix_flat[2], view_matrix_flat[3]],
+					[view_matrix_flat[4], view_matrix_flat[5], view_matrix_flat[6], view_matrix_flat[7]],
+					[view_matrix_flat[8], view_matrix_flat[9], view_matrix_flat[10], view_matrix_flat[11]],
+					[view_matrix_flat[12], view_matrix_flat[13], view_matrix_flat[14], view_matrix_flat[15]]])
+
+				w2sx, w2sy = world_to_screen(viewMatrix, temp_entity.head)
+				temp_entity.head2d = Vector2(w2sx, w2sy)
+
+				temp_entity.pixelDistance = distance_vec2(temp_entity.head2d, Vector2(user32.GetSystemMetrics(0) / 2, user32.GetSystemMetrics(1) / 2))
+				entities.append(temp_entity)
+
+			entities = sorted(entities, key=lambda o: o.distance)
+
+			if len(entities) > 0 and user32.GetAsyncKeyState(0x06) & 0x8000 and enable_aimbot:
+				playerView = Vector3.__add__(localPlayer.origin, localPlayer.view)
+				# entityView = Vector3.__add__(entities[0].origin, entities[0].view)
+
+				if entities[0].pixelDistance < aimbot_fov or enable_aimbot_fov == False:
+					newAngles = calculate_angles(playerView, entities[0].head)
+					newAnglesVec3 = Vector3(newAngles.y, newAngles.x, 0.0)
+
+					memf.WriteVec(client, newAnglesVec3, offsets.dwViewAngles)
+		except KeyboardInterrupt:
+			break
+		except:
+			pass
 
 def main():
 	try:
@@ -446,7 +627,8 @@ def main():
 	threading.Thread(target=anti_flash_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=bhop_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=fov_changer_thread, args=(memf, client, offsets), daemon=True).start()
-
+	threading.Thread(target=bomb_timer_thread, args=(memf, client, offsets), daemon=True).start()
+	threading.Thread(target=aimbot_thread, args=(memf, client, offsets), daemon=True).start()
 
 	print("[+] GUI Initialized")
 
@@ -521,6 +703,29 @@ def main():
 
 				if tracer_rendering:
 					draw_tracer(pme, start_pos_x, start_pos_y, rect_center_x, rect_center_y, entity.Team)
+
+				if enable_aimbot_fov:
+					pme.draw_circle_lines(user32.GetSystemMetrics(0) // 2, user32.GetSystemMetrics(1) // 2, aimbot_fov, pme.get_color("#ffffff"))
+
+				if enable_bomb_timer:
+					if bombPlanted:
+						bomb_text = f"Bomb Planted \n{str(bomb_time_left)}s until detonation"
+						text_height = 70
+						y_offset = -30
+					else:
+						bomb_text = "Bomb Not Planted"
+						text_height = 30
+						y_offset = 15
+
+					font_size = 25.0
+					text_color = pme.get_color("#ffffff")
+					background_color = pme.fade_color(pme.get_color("#000000"), 0.6)
+					text_width = pme.measure_text(bomb_text, int(font_size))
+					background_width = text_width + 20
+					background_height = text_height + 15
+					y_position = user32.GetSystemMetrics(1) // 2 + y_offset
+					pme.draw_rectangle(10, y_position, background_width, background_height, background_color)
+					pme.draw_text(bomb_text, 20, y_position + 10, fontSize=font_size, color=text_color)
 
 		pme.end_drawing()
 

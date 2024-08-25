@@ -26,7 +26,13 @@ python main.py
 - [x] Anti Flashbang
 - [x] Auto Bhop
 - [x] FOV Changer
-- [ ] Aimbot
+- [x] Bomb Timer
+- [x] Aimbot
+- [ ] Configs
+
+## Credits
+
+Big Thanks to [HWYkagiru](https://github.com/HWYkagiru) for the GUI revamp <3
 
 ## Preview
 
