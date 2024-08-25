@@ -32,7 +32,7 @@ python main.py
 
 ## Credits
 
-Big Thanks to [HWYkagiru](https://github.com/HWYkagiru) for the GUI revamp <3
+> **Big Thanks to [HWYkagiru](https://github.com/HWYkagiru) for the GUI revamp 💖**
 
 ## Preview
 
