@@ -15,6 +15,7 @@ import customtkinter as ctk
 from tkinter import BooleanVar, StringVar
 from CTkColorPicker import AskColor
 import webbrowser
+from  pypresence import Presence
 
 from ext_types import * 
 from memfuncs import memfunc
@@ -67,6 +68,7 @@ enable_bhop: bool = False
 player_fov: int = 105
 fov_changer_option: bool = False
 enable_bomb_timer: bool = False; bomb_time_left: int = -1; bombPlanted: bool = False
+discord_presence_enabled: bool = True
 
 enable_aimbot: bool = False
 # aimbot_hotkey: ? = ?
@@ -609,6 +611,27 @@ def aimbot_thread(memf, client, offsets):
 		except:
 			pass
 
+def discord_rpc_thread():
+	presence = Presence(1277586728517107744)
+	presence.connect()
+	while True:
+		if discord_presence_enabled:
+			try:
+				presence.update(
+					state="github.com/GsDeluxe/cs2py",
+					details="FREE CS2 CHEAT",
+					start=int(time.time()),
+					large_image="cs2py",
+					large_text="cs2py",
+					small_image="github",
+					small_text="GsDeluxe on GitHub",
+					buttons=[{'label': 'GitHub', 'url': 'https://github.com/GsDeluxe/cs2py'}]
+				)
+			except Exception as e:
+				pass
+		
+		time.sleep(10)
+
 def main():
 	try:
 		pm = pymem.Pymem("cs2.exe")
@@ -623,12 +646,15 @@ def main():
 	offsets = get_offsets()
 
 	threading.Thread(target=GUI, daemon=True).start()
+	threading.Thread(target=discord_rpc_thread, daemon=True).start()
+
 	threading.Thread(target=triggerbot_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=anti_flash_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=bhop_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=fov_changer_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=bomb_timer_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=aimbot_thread, args=(memf, client, offsets), daemon=True).start()
+
 
 	print("[+] GUI Initialized")
 
@@ -871,7 +897,7 @@ def GUI():
 	color_frame_width = 200
 
 	def create_color_display_frame(parent, color):
-		canvas = ctk.CTkCanvas(master=parent, width=30, height=30, highlightthickness=0, bg="#8A2BE2")
+		canvas = ctk.CTkCanvas(master=parent, width=30, height=30, highlightthickness=0, bg=color)
 		update_color_display(canvas, color)
 		return canvas
 
@@ -950,6 +976,10 @@ def GUI():
 
 	enable_bomb_timer_var = ctk.BooleanVar(value=enable_bomb_timer)
 	create_checkbox_with_outline(tab_misc, "Enable Bomb Timer", enable_bomb_timer_var, lambda: checkbox_action('enable_bomb_timer', enable_bomb_timer_var))
+
+	discord_presence_var = ctk.BooleanVar(value=discord_presence_enabled)
+	create_checkbox_with_outline(tab_misc, "Discord RPC", discord_presence_var, lambda: checkbox_action('discord_presence_enabled', discord_presence_var))
+
 
 	fov_changer_var = ctk.BooleanVar(value=fov_changer_option)
 	create_checkbox_with_outline(tab_misc, "Enable FOV Changer", fov_changer_var, lambda: checkbox_action('fov_changer_option', fov_changer_var))
