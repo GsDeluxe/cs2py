@@ -1,8 +1,4 @@
-
- 
-
 ![CS2PY](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/cs2py_banner.png)
-<h1 align="center">CS2PY</h1>
 
 External CS2 Cheat written in Python3
 > you can find offsets by using this [offset dumper](https://github.com/a2x/cs2-dumper)
