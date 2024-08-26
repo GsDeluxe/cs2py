@@ -1,4 +1,4 @@
-![CS2PY](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/cs2py_banner.png)
+![CS2PY](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/cs2py_banner.png)
 
 External CS2 Cheat written in Python3
 > you can find offsets by using this [offset dumper](https://github.com/a2x/cs2-dumper)
@@ -33,8 +33,8 @@ python main.py
 
 ## Preview
 
-![VISUALS_IMG](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/esp_view.png)
+![VISUALS_IMG](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_view.png)
 
 | Visuals | Triggerbot | Aimbot | Misc |
 |:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
-| ![Visuals](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/esp_tab.png) | ![Triggerbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/triggerbot_tab.png) | ![Aimbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/aimbot_tab.png) | ![Misc](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/misc_tab.png) |
+| ![Visuals](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_tab.png) | ![Triggerbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/triggerbot_tab.png) | ![Aimbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/aimbot_tab.png) | ![Misc](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/misc_tab.png) |
