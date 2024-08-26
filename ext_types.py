@@ -8,12 +8,16 @@ class Vector3:
 	y: float
 	z: float
 	def __add__(self, other: 'Vector3') -> 'Vector3':return Vector3(x=self.x + other.x,y=self.y + other.y,z=self.z + other.z)
+	def __sub__(self, other: 'Vector3') -> 'Vector3': return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
+	def __mul__(self, scalar: float) -> 'Vector3': return Vector3(self.x * scalar, self.y * scalar, self.z * scalar)
 
 @dataclass
 class Vector2:
 	x: float
 	y: float
 	def __add__(self, other: 'Vector2') -> 'Vector2': return Vector2(x=self.x + other.x,y=self.y + other.y)
+	def __sub__(self, other: 'Vector2') -> 'Vector2': return Vector2(x=self.x - other.x, y=self.y - other.y)
+	def __mul__(self, scalar: float) -> 'Vector2': return Vector2(x=self.x * scalar, y=self.y * scalar)
 
 @dataclass
 class Rectangle:
