@@ -76,7 +76,7 @@ aimbot_team_check: bool = True
 visibility_check: bool = False
 enable_aimbot_fov: bool = False
 aimbot_fov: float = 400
-aimbot_smoothness: float = 2.0
+aimbot_smoothness: int = 0
 aim_position = bones["head"]
 
 def world_to_screen(view_matrix: Matrix, position: Vector3):
@@ -452,7 +452,6 @@ def fov_changer_thread(memf: memfunc, client, offsets):
 			break
 		except Exception as e:
 			pass
-		time.sleep(0.001)
 
 def check_in_game(memf, client, offsets):
 	game_not_in_memory = True
@@ -489,6 +488,7 @@ def bomb_timer_thread(memf: memfunc, client, offsets: Offset):
 		time.sleep(0.01)
 
 def aimbot_thread(memf, client, offsets):
+	def lerp(start, end, t): return start + (end - start) * t
 	entities = []
 	localPlayer = Entity(
 		Health=0,
@@ -604,9 +604,16 @@ def aimbot_thread(memf, client, offsets):
 
 				if entities[0].pixelDistance < aimbot_fov or enable_aimbot_fov == False:
 					newAngles = calculate_angles(playerView, entities[0].head)
-					newAnglesVec3 = Vector3(newAngles.y, newAngles.x, 0.0)
+					target_angles = Vector3(newAngles.y, newAngles.x, 0.0)
 
-					memf.WriteVec(client, newAnglesVec3, offsets.dwViewAngles)
+					if aimbot_smoothness > 0:
+						current_angles = memf.ReadVec(client, offsets.dwViewAngles)
+						
+						smoothed_angles = lerp(current_angles, target_angles, aimbot_smoothness / 20.0)
+						memf.WriteVec(client, smoothed_angles, offsets.dwViewAngles)
+					else:
+						memf.WriteVec(client, target_angles, offsets.dwViewAngles)
+
 		except KeyboardInterrupt:
 			break
 		except:
@@ -802,6 +809,11 @@ def GUI():
 		aimbot_fov = float(value)
 		aimbot_fov_value_label.configure(text=f"Aimbot FOV: {aimbot_fov:.1f}")
 
+	def smoothness_slider_action(value):
+		global aimbot_smoothness
+		aimbot_smoothness = int(value)
+		smoothness_value_label.configure(text=f"Aimbot Smoothness: {aimbot_smoothness}")
+
 	def update_aim_position(value):
 		global aim_position
 		aim_position = bones.get(value)
@@ -969,7 +981,8 @@ def GUI():
 	optionmenu.pack(padx=10, pady=5, anchor="w", fill="x")
 
 	aimbot_fov_slider, aimbot_fov_value_label = create_slider_with_label(tab_aimbot, aimbot_fov, aimbot_fov_slider_action, "Aimbot FOV", 0, 800, 1)
-	# smoothness_slider, smoothness_value_label = create_slider_with_label(tab_aimbot, aimbot_smoothness, smoothness_slider_action, "Smoothness", 0, 10, 0.1)
+	
+	smoothness_slider, smoothness_value_label = create_slider_with_label(tab_aimbot, aimbot_smoothness, smoothness_slider_action, "Smoothness", 0, 7, 1)
 
 	anti_flashbang_var = ctk.BooleanVar(value=anti_flashbang)
 	create_checkbox_with_outline(tab_misc, "Enable Anti Flashbang", anti_flashbang_var, lambda: checkbox_action('anti_flashbang', anti_flashbang_var))
