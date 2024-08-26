@@ -282,36 +282,37 @@ def get_entities_info(mem: memfunc, client_dll: int, screen_width: int, screen_h
 
 
 def get_offsets() -> Offset:
+	oc = offsets.Client()
 	offsets_obj = Offset(
-		dwViewMatrix=offsets.Client().offset("dwViewMatrix"),
-		dwLocalPlayerPawn=offsets.Client().offset("dwLocalPlayerPawn"),
-		dwEntityList=offsets.Client().offset("dwEntityList"),
-		dwLocalPlayerController=offsets.Client().offset("dwLocalPlayerController"),
-		dwViewAngles = offsets.Client().offset("dwViewAngles"),
-		dwGameRules = offsets.Client().offset("dwGameRules"),
+		dwViewMatrix=oc.offset("dwViewMatrix"),
+		dwLocalPlayerPawn=oc.offset("dwLocalPlayerPawn"),
+		dwEntityList=oc.offset("dwEntityList"),
+		dwLocalPlayerController=oc.offset("dwLocalPlayerController"),
+		dwViewAngles = oc.offset("dwViewAngles"),
+		dwGameRules = oc.offset("dwGameRules"),
 
-		ButtonJump=offsets.Client().button("jump"),
+		ButtonJump=oc.button("jump"),
 		
-		m_hPlayerPawn=offsets.Client().get("CCSPlayerController", "m_hPlayerPawn"),
-		m_iHealth=offsets.Client().get("C_BaseEntity", "m_iHealth"),
-		m_lifeState=offsets.Client().get("C_BaseEntity", "m_lifeState"),
-		m_iTeamNum=offsets.Client().get("C_BaseEntity", "m_iTeamNum"),
-		m_vOldOrigin=offsets.Client().get("C_BasePlayerPawn", "m_vOldOrigin"),
-		m_pGameSceneNode=offsets.Client().get("C_BaseEntity", "m_pGameSceneNode"),
-		m_modelState=offsets.Client().get("CSkeletonInstance", "m_modelState"),
+		m_hPlayerPawn=oc.get("CCSPlayerController", "m_hPlayerPawn"),
+		m_iHealth=oc.get("C_BaseEntity", "m_iHealth"),
+		m_lifeState=oc.get("C_BaseEntity", "m_lifeState"),
+		m_iTeamNum=oc.get("C_BaseEntity", "m_iTeamNum"),
+		m_vOldOrigin=oc.get("C_BasePlayerPawn", "m_vOldOrigin"),
+		m_pGameSceneNode=oc.get("C_BaseEntity", "m_pGameSceneNode"),
+		m_modelState=oc.get("CSkeletonInstance", "m_modelState"),
 		m_boneArray=128,
-		m_nodeToWorld=offsets.Client().get("CGameSceneNode", "m_nodeToWorld"),
-		m_sSanitizedPlayerName=offsets.Client().get("CCSPlayerController", "m_sSanitizedPlayerName"),
-		m_iIDEntIndex=offsets.Client().get("C_CSPlayerPawnBase", "m_iIDEntIndex"),
-		m_flFlashMaxAlpha=offsets.Client().get("C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
-		m_fFlags=offsets.Client().get("C_BaseEntity", "m_fFlags"),
-		m_iFOV=offsets.Client().get("CCSPlayerBase_CameraServices", "m_iFOV"),
-		m_pCameraServices=offsets.Client().get("C_BasePlayerPawn", "m_pCameraServices"),
-		m_bIsScoped=offsets.Client().get("C_CSPlayerPawn", "m_bIsScoped"),
-		m_vecViewOffset = offsets.Client().get("C_BaseModelEntity", "m_vecViewOffset"),
-		m_entitySpottedState = offsets.Client().get("C_CSPlayerPawn", "m_entitySpottedState"),
-		m_bSpotted = offsets.Client().get("EntitySpottedState_t", "m_bSpotted"),
-		m_bBombPlanted = offsets.Client().get("C_CSGameRules", "m_bBombPlanted"),
+		m_nodeToWorld=oc.get("CGameSceneNode", "m_nodeToWorld"),
+		m_sSanitizedPlayerName=oc.get("CCSPlayerController", "m_sSanitizedPlayerName"),
+		m_iIDEntIndex=oc.get("C_CSPlayerPawnBase", "m_iIDEntIndex"),
+		m_flFlashMaxAlpha=oc.get("C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
+		m_fFlags=oc.get("C_BaseEntity", "m_fFlags"),
+		m_iFOV=oc.get("CCSPlayerBase_CameraServices", "m_iFOV"),
+		m_pCameraServices=oc.get("C_BasePlayerPawn", "m_pCameraServices"),
+		m_bIsScoped=oc.get("C_CSPlayerPawn", "m_bIsScoped"),
+		m_vecViewOffset = oc.get("C_BaseModelEntity", "m_vecViewOffset"),
+		m_entitySpottedState = oc.get("C_CSPlayerPawn", "m_entitySpottedState"),
+		m_bSpotted = oc.get("EntitySpottedState_t", "m_bSpotted"),
+		m_bBombPlanted = oc.get("C_CSGameRules", "m_bBombPlanted"),
 
 	)
 
@@ -614,23 +615,25 @@ def aimbot_thread(memf, client, offsets):
 def discord_rpc_thread():
 	presence = Presence(1277586728517107744)
 	presence.connect()
+	a = False
 	while True:
 		if discord_presence_enabled:
-			try:
-				presence.update(
-					state="github.com/GsDeluxe/cs2py",
-					details="FREE CS2 CHEAT",
-					start=int(time.time()),
-					large_image="cs2py",
-					large_text="cs2py",
-					small_image="github",
-					small_text="GsDeluxe on GitHub",
-					buttons=[{'label': 'GitHub', 'url': 'https://github.com/GsDeluxe/cs2py'}]
-				)
-			except Exception as e:
-				pass
-		
-		time.sleep(10)
+			if not a:
+				try:
+					presence.update(
+						state="github.com/GsDeluxe/cs2py",
+						details="FREE CS2 CHEAT",
+						start=int(time.time()),
+						large_image="cs2py",
+						large_text="cs2py",
+						small_image="github",
+						small_text="GsDeluxe on GitHub",
+						buttons=[{'label': 'GitHub', 'url': 'https://github.com/GsDeluxe/cs2py'}]
+					)
+				except Exception as e:
+					pass
+			a = True
+			time.sleep(1)
 
 def main():
 	try:
