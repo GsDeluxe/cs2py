@@ -9,7 +9,7 @@ import offsets
 import os
 import keyboard
 from random import uniform
-from pynput.mouse import Controller, Button
+from pynput.mouse import Controller, Button, Listener
 
 import customtkinter as ctk
 from tkinter import BooleanVar, StringVar
@@ -60,6 +60,7 @@ ct_color: str = "#39FF14"
 
 mouse = Controller()
 enable_triggerbot: bool = False
+enable_triggerbot_keycheck: bool = True
 triggerbot_key: str = "shift"
 triggerbot_team_check: bool = False
 
@@ -79,6 +80,9 @@ aimbot_fov: float = 400
 aimbot_smoothness: int = 0
 aim_position = bones["head"]
 
+SCREEN_WIDTH = user32.GetSystemMetrics(0)
+SCREEN_HEIGHT = user32.GetSystemMetrics(1)
+
 def world_to_screen(view_matrix: Matrix, position: Vector3):
 	mat = view_matrix.matrix
 
@@ -96,11 +100,9 @@ def world_to_screen(view_matrix: Matrix, position: Vector3):
 	screen_y *= invw
 	
 	user32 = ctypes.WinDLL('user32')
-	width = user32.GetSystemMetrics(0)
-	height = user32.GetSystemMetrics(1)
 	
-	width_float = float(width)
-	height_float = float(height)
+	width_float = float(SCREEN_WIDTH)
+	height_float = float(SCREEN_HEIGHT)
 	
 	x = width_float / 2.0
 	y = height_float / 2.0
@@ -366,7 +368,7 @@ def triggerbot_thread(memf, client, offsets):
 				time.sleep(0.1)
 				continue
 
-			if keyboard.is_pressed(triggerbot_key):
+			if keyboard.is_pressed(triggerbot_key) or enable_triggerbot_keycheck == False:
 				player = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
 				entityId = memf.ReadInt(player, offsets.m_iIDEntIndex)
 
@@ -457,7 +459,7 @@ def check_in_game(memf, client, offsets):
 	game_not_in_memory = True
 	while True:
 		try:
-			get_entities_info(memf, client, user32.GetSystemMetrics(0), user32.GetSystemMetrics(1), offsets, False)
+			get_entities_info(memf, client, SCREEN_WIDTH, SCREEN_HEIGHT, offsets, False)
 			if game_not_in_memory:
 				print("[+] Game is in memory, proceeding...")
 			break
@@ -515,7 +517,7 @@ def aimbot_thread(memf, client, offsets):
 			entityList = memf.ReadPointer(client, offsets.dwEntityList)
 
 			localPlayer.pawnAddress = memf.ReadPointer(client, offsets.dwLocalPlayerPawn)
-			localPlayer.team = memf.ReadInt(localPlayer.pawnAddress, offsets.m_iTeamNum)
+			localPlayer.Team = memf.ReadInt(localPlayer.pawnAddress, offsets.m_iTeamNum)
 			localPlayer.origin = memf.ReadVec(localPlayer.pawnAddress, offsets.m_vOldOrigin)
 			localPlayer.view = memf.ReadVec(localPlayer.pawnAddress, offsets.m_vecViewOffset)
 			localPlayer.HeadPos = None
@@ -551,7 +553,7 @@ def aimbot_thread(memf, client, offsets):
 				if lifestate != 256:
 					continue
 
-				if aimbot_team_check and localPlayer.team == team:
+				if aimbot_team_check and localPlayer.Team == team:
 					continue
 
 				temp_entity = Entity(
@@ -593,7 +595,7 @@ def aimbot_thread(memf, client, offsets):
 				w2sx, w2sy = world_to_screen(viewMatrix, temp_entity.head)
 				temp_entity.head2d = Vector2(w2sx, w2sy)
 
-				temp_entity.pixelDistance = distance_vec2(temp_entity.head2d, Vector2(user32.GetSystemMetrics(0) / 2, user32.GetSystemMetrics(1) / 2))
+				temp_entity.pixelDistance = distance_vec2(temp_entity.head2d, Vector2(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2))
 				entities.append(temp_entity)
 
 			entities = sorted(entities, key=lambda o: o.distance)
@@ -702,7 +704,7 @@ def main():
 		if GetWindowText(GetForegroundWindow()) == "Counter-Strike 2":
 
 			try:
-				entities = get_entities_info(mem=memf, client_dll=client, screen_width=user32.GetSystemMetrics(0), screen_height=user32.GetSystemMetrics(1), offsets=offsets, team_check=team_check)
+				entities = get_entities_info(mem=memf, client_dll=client, screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT, offsets=offsets, team_check=team_check)
 			except pymem.exception.MemoryReadError:
 				print("[-] Error Reading Game")
 				check_in_game(memf, client, offsets)
@@ -741,7 +743,7 @@ def main():
 					draw_tracer(pme, start_pos_x, start_pos_y, rect_center_x, rect_center_y, entity.Team)
 
 				if enable_aimbot_fov:
-					pme.draw_circle_lines(user32.GetSystemMetrics(0) // 2, user32.GetSystemMetrics(1) // 2, aimbot_fov, pme.get_color("#ffffff"))
+					pme.draw_circle_lines(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, aimbot_fov, pme.get_color("#ffffff"))
 
 				if enable_bomb_timer:
 					if bombPlanted:
@@ -759,7 +761,7 @@ def main():
 					text_width = pme.measure_text(bomb_text, int(font_size))
 					background_width = text_width + 20
 					background_height = text_height + 15
-					y_position = user32.GetSystemMetrics(1) // 2 + y_offset
+					y_position = SCREEN_HEIGHT // 2 + y_offset
 					pme.draw_rectangle(10, y_position, background_width, background_height, background_color)
 					pme.draw_text(bomb_text, 20, y_position + 10, fontSize=font_size, color=text_color)
 
@@ -806,8 +808,8 @@ def GUI():
 
 	def aimbot_fov_slider_action(value):
 		global aimbot_fov
-		aimbot_fov = float(value)
-		aimbot_fov_value_label.configure(text=f"Aimbot FOV: {aimbot_fov:.1f}")
+		aimbot_fov = int(value)
+		aimbot_fov_value_label.configure(text=f"Aimbot FOV: {aimbot_fov}")
 
 	def smoothness_slider_action(value):
 		global aimbot_smoothness
@@ -945,6 +947,9 @@ def GUI():
 
 	triggerbot_team_check_var = ctk.BooleanVar(value=triggerbot_team_check)
 	create_checkbox_with_outline(tab_triggerbot, "Enable Team Check", triggerbot_team_check_var, lambda: checkbox_action('triggerbot_team_check', triggerbot_team_check_var))
+
+	triggerbot_key_check_var = ctk.BooleanVar(value=enable_triggerbot_keycheck)
+	create_checkbox_with_outline(tab_triggerbot, "Enable Key Check", triggerbot_key_check_var, lambda: checkbox_action('enable_triggerbot_keycheck', triggerbot_key_check_var))
 
 	global triggerbot_key_var
 	triggerbot_key_var = StringVar(value=f"Trigger Key: {triggerbot_key}")
