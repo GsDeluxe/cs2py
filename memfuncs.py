@@ -2,18 +2,21 @@ import pymem
 import struct
 from pymem import Pymem
 from pymem.process import module_from_name
-from ext_types import * 
+from ext_types import *
 
-class memfunc:
+# Memory manipulation class for reading/writing process memory
+class MemoryFunctions:
     
-    def __init__(self, proc):
+    def __init__(self, proc=None):
         self.proc = proc
 
-    def GetProcess(self, procname):
+    def get_process(self, procname):
+        """Attach to a process by name"""
         self.proc = Pymem(procname)
         return self.proc
 
-    def GetModuleBase(self, modulename):
+    def get_module_base(self, modulename):
+        """Get base address of a module in the process"""
         if not modulename or not self.proc:
             return None
         
@@ -22,98 +25,123 @@ class memfunc:
             return module.lpBaseOfDll
         return None
 
-    def ReadPointer(self, addy, offset=0):
-        address = addy + offset
-        return self.proc.read_longlong(address)
-
-    def ReadBytes(self, addy, bytes_count):
-        return self.proc.read_bytes(addy, bytes_count)
-
-    def WriteBytes(self, address, newbytes):
-        return self.proc.write_bytes(address, newbytes, len(newbytes))
-
-    def ReadInt(self, address, offset=0):
-        return self.proc.read_int(address + offset)
-
-    def ReadLong(self, address, offset=0):
+    # Memory read operations
+    def read_pointer(self, address, offset=0):
+        """Read 64-bit pointer"""
         return self.proc.read_longlong(address + offset)
 
-    def ReadFloat(self, address, offset=0):
+    def read_bytes(self, address, size):
+        """Read raw bytes"""
+        return self.proc.read_bytes(address, size)
+
+    def read_int(self, address, offset=0):
+        """Read 32-bit integer"""
+        return self.proc.read_int(address + offset)
+
+    def read_uint(self, address, offset=0):
+        """Read unsigned 32-bit integer"""
+        return self.proc.read_uint(address + offset)
+
+    def read_long(self, address, offset=0):
+        """Read 64-bit integer"""
+        return self.proc.read_longlong(address + offset)
+
+    def read_ulong(self, address, offset=0):
+        """Read unsigned 64-bit integer"""
+        bytes_ = self.read_bytes(address + offset, 8)
+        return struct.unpack('Q', bytes_)[0]
+
+    def read_short(self, address, offset=0):
+        """Read 16-bit integer"""
+        bytes_ = self.read_bytes(address + offset, 2)
+        return struct.unpack('h', bytes_)[0]
+
+    def read_ushort(self, address, offset=0):
+        """Read unsigned 16-bit integer"""
+        bytes_ = self.read_bytes(address + offset, 2)
+        return struct.unpack('H', bytes_)[0]
+
+    def read_float(self, address, offset=0):
+        """Read 32-bit float"""
         return self.proc.read_float(address + offset)
 
-    def ReadDouble(self, address, offset=0):
+    def read_double(self, address, offset=0):
+        """Read 64-bit float"""
         return self.proc.read_double(address + offset)
 
-    def ReadVec(self, address, offset=0):
-        bytes_ = self.ReadBytes(address + offset, 12)
+    def read_bool(self, address, offset=0):
+        """Read boolean value"""
+        return self.proc.read_bool(address + offset)
+
+    def read_string(self, address, length, offset=0):
+        """Read string of specified length"""
+        return self.proc.read_string(address + offset, length)
+
+    def read_char(self, address, offset=0):
+        """Read single character"""
+        bytes_ = self.read_bytes(address + offset, 2)
+        return struct.unpack('c', bytes_)[0].decode('utf-8')
+
+    def read_vector3(self, address, offset=0):
+        """Read 3D vector (x,y,z floats)"""
+        bytes_ = self.read_bytes(address + offset, 12)
         x, y, z = struct.unpack('fff', bytes_)
         return Vector3(x, y, z)
 
-    def ReadShort(self, address, offset=0):
-        bytes_ = self.ReadBytes(address + offset, 2)
-        return struct.unpack('h', bytes_)[0]
+    def read_matrix(self, address):
+        """Read 4x4 float matrix"""
+        bytes_ = self.read_bytes(address, 4 * 16)
+        return struct.unpack('16f', bytes_)
 
-    def ReadUShort(self, address, offset=0):
-        bytes_ = self.ReadBytes(address + offset, 2)
-        return struct.unpack('H', bytes_)[0]
+    # Memory write operations
+    def write_bytes(self, address, data):
+        """Write raw bytes"""
+        return self.proc.write_bytes(address, data, len(data))
 
-    def ReadUInt(self, address, offset=0):
-        return self.proc.read_uint(address + offset)
-
-    def ReadULong(self, address, offset=0):
-        bytes_ = self.ReadBytes(address + offset, 8)
-        return struct.unpack('Q', bytes_)[0]
-
-    def ReadBool(self, address, offset=0):
-        return self.proc.read_bool(address + offset)
-
-    def ReadString(self, address, length, offset=0):
-        return self.proc.read_string(address + offset, length)
-
-    def ReadChar(self, address, offset=0):
-        bytes_ = self.ReadBytes(address + offset, 2)
-        return struct.unpack('c', bytes_)[0].decode('utf-8')
-
-    def ReadMatrix(self, address):
-        bytes_ = self.ReadBytes(address, 4 * 16)
-        matrix = struct.unpack('16f', bytes_)
-        return matrix
-
-    def WriteInt(self, address, value, offset=0):
+    def write_int(self, address, value, offset=0):
+        """Write 32-bit integer"""
         return self.proc.write_int(address + offset, value)
 
-    def WriteShort(self, address, value, offset=0):
-        bytes_ = struct.pack('h', value)
-        return self.WriteBytes(address + offset, bytes_)
-
-    def WriteUShort(self, address, value, offset=0):
-        bytes_ = struct.pack('H', value)
-        return self.WriteBytes(address + offset, bytes_)
-
-    def WriteUInt(self, address, value, offset=0):
+    def write_uint(self, address, value, offset=0):
+        """Write unsigned 32-bit integer"""
         return self.proc.write_uint(address + offset, value)
 
-    def WriteLong(self, address, value, offset=0):
+    def write_long(self, address, value, offset=0):
+        """Write 64-bit integer"""
         return self.proc.write_longlong(address + offset, value)
 
-    def WriteULong(self, address, value, offset=0):
+    def write_ulong(self, address, value, offset=0):
+        """Write unsigned 64-bit integer"""
         bytes_ = struct.pack('Q', value)
-        return self.WriteBytes(address + offset, bytes_)
+        return self.write_bytes(address + offset, bytes_)
 
-    def WriteFloat(self, address, value, offset=0):
+    def write_short(self, address, value, offset=0):
+        """Write 16-bit integer"""
+        bytes_ = struct.pack('h', value)
+        return self.write_bytes(address + offset, bytes_)
+
+    def write_ushort(self, address, value, offset=0):
+        """Write unsigned 16-bit integer"""
+        bytes_ = struct.pack('H', value)
+        return self.write_bytes(address + offset, bytes_)
+
+    def write_float(self, address, value, offset=0):
+        """Write 32-bit float"""
         return self.proc.write_float(address + offset, value)
 
-    def WriteDouble(self, address, value, offset=0):
+    def write_double(self, address, value, offset=0):
+        """Write 64-bit float"""
         return self.proc.write_double(address + offset, value)
 
-    def WriteBool(self, address, value, offset=0):
+    def write_bool(self, address, value, offset=0):
+        """Write boolean value"""
         return self.proc.write_bool(address + offset, value)
 
-    def WriteString(self, address, value, offset=0):
+    def write_string(self, address, value, offset=0):
+        """Write string"""
         return self.proc.write_string(address + offset, value)
 
-    def WriteVec(self, address, value, offset=0):
+    def write_vector3(self, address, value, offset=0):
+        """Write 3D vector (x,y,z floats)"""
         bytes_ = struct.pack('fff', value.x, value.y, value.z)
-        return self.WriteBytes(address + offset, bytes_)
-
-
+        return self.write_bytes(address + offset, bytes_)
