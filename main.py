@@ -10,6 +10,8 @@ import os
 import keyboard
 from random import uniform
 from pynput.mouse import Controller, Button, Listener
+import json
+import math
 
 import customtkinter as ctk
 from tkinter import BooleanVar, StringVar
@@ -19,7 +21,7 @@ from  pypresence import Presence
 
 from ext_types import * 
 from memfuncs import memfunc
-
+from typing import Dict, List
 
 # Load the DLLs
 user32 = ctypes.WinDLL('user32.dll')
@@ -47,6 +49,7 @@ bones = {
 	"ankle_R": 27,
 	}
 
+# Global variables
 team_check: bool = False
 skeleton_rendering: bool = True
 box_rendering: bool = True
@@ -72,13 +75,17 @@ enable_bomb_timer: bool = False; bomb_time_left: int = -1; bombPlanted: bool = F
 discord_presence_enabled: bool = True
 
 enable_aimbot: bool = False
-# aimbot_hotkey: ? = ?
 aimbot_team_check: bool = True
 visibility_check: bool = False
 enable_aimbot_fov: bool = False
 aimbot_fov: float = 400
 aimbot_smoothness: int = 0
 aim_position = bones["head"]
+
+# Config management
+CONFIG_DIR = "configs"
+configs: Dict[str, Dict] = {}
+current_config_name: str = ""
 
 SCREEN_WIDTH = user32.GetSystemMetrics(0)
 SCREEN_HEIGHT = user32.GetSystemMetrics(1)
@@ -644,6 +651,137 @@ def discord_rpc_thread():
 			a = True
 			time.sleep(1)
 
+# Config Management Functions
+def save_config(name: str):
+    """Save current settings to a configuration file"""
+    if not os.path.exists(CONFIG_DIR):
+        os.makedirs(CONFIG_DIR)
+    
+    try:
+        config = {
+            # ESP Settings
+            "team_check": bool(team_check),
+            "skeleton_rendering": bool(skeleton_rendering),
+            "box_rendering": bool(box_rendering),
+            "tracer_rendering": bool(tracer_rendering),
+            "name_rendering": bool(name_rendering),
+            "health_bar_rendering": bool(health_bar_rendering),
+            "health_text_rendering": bool(health_text_rendering),
+            "t_color": str(t_color),
+            "ct_color": str(ct_color),
+            
+            # Triggerbot Settings
+            "enable_triggerbot": bool(enable_triggerbot),
+            "enable_triggerbot_keycheck": bool(enable_triggerbot_keycheck),
+            "triggerbot_key": str(triggerbot_key),
+            "triggerbot_team_check": bool(triggerbot_team_check),
+            
+            # Aimbot Settings
+            "enable_aimbot": bool(enable_aimbot),
+            "aimbot_team_check": bool(aimbot_team_check),
+            "visibility_check": bool(visibility_check),
+            "enable_aimbot_fov": bool(enable_aimbot_fov),
+            "aimbot_fov": float(aimbot_fov),
+            "aimbot_smoothness": int(aimbot_smoothness),
+            "aim_position": int(aim_position),
+            
+            # Misc Settings
+            "anti_flashbang": bool(anti_flashbang),
+            "enable_bhop": bool(enable_bhop),
+            "player_fov": int(player_fov),
+            "fov_changer_option": bool(fov_changer_option),
+            "enable_bomb_timer": bool(enable_bomb_timer),
+            "discord_presence_enabled": bool(discord_presence_enabled)
+        }
+        
+        config_path = os.path.join(CONFIG_DIR, f"{name}.json")
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+        
+        load_configs_list()
+        return True
+        
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        return False
+
+def load_config(name: str):
+    """Load settings from a configuration file"""
+    global current_config_name
+    config_path = os.path.join(CONFIG_DIR, f"{name}.json")
+    
+    if not os.path.exists(config_path):
+        return False
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        # Update global variables with safe type conversion
+        globals()["team_check"] = bool(config.get("team_check", team_check))
+        globals()["skeleton_rendering"] = bool(config.get("skeleton_rendering", skeleton_rendering))
+        globals()["box_rendering"] = bool(config.get("box_rendering", box_rendering))
+        globals()["tracer_rendering"] = bool(config.get("tracer_rendering", tracer_rendering))
+        globals()["name_rendering"] = bool(config.get("name_rendering", name_rendering))
+        globals()["health_bar_rendering"] = bool(config.get("health_bar_rendering", health_bar_rendering))
+        globals()["health_text_rendering"] = bool(config.get("health_text_rendering", health_text_rendering))
+        globals()["t_color"] = str(config.get("t_color", t_color))
+        globals()["ct_color"] = str(config.get("ct_color", ct_color))
+        
+        globals()["enable_triggerbot"] = bool(config.get("enable_triggerbot", enable_triggerbot))
+        globals()["enable_triggerbot_keycheck"] = bool(config.get("enable_triggerbot_keycheck", enable_triggerbot_keycheck))
+        globals()["triggerbot_key"] = str(config.get("triggerbot_key", triggerbot_key))
+        globals()["triggerbot_team_check"] = bool(config.get("triggerbot_team_check", triggerbot_team_check))
+        
+        globals()["enable_aimbot"] = bool(config.get("enable_aimbot", enable_aimbot))
+        globals()["aimbot_team_check"] = bool(config.get("aimbot_team_check", aimbot_team_check))
+        globals()["visibility_check"] = bool(config.get("visibility_check", visibility_check))
+        globals()["enable_aimbot_fov"] = bool(config.get("enable_aimbot_fov", enable_aimbot_fov))
+        globals()["aimbot_fov"] = float(config.get("aimbot_fov", aimbot_fov))
+        globals()["aimbot_smoothness"] = int(config.get("aimbot_smoothness", aimbot_smoothness))
+        globals()["aim_position"] = int(config.get("aim_position", aim_position))
+        
+        globals()["anti_flashbang"] = bool(config.get("anti_flashbang", anti_flashbang))
+        globals()["enable_bhop"] = bool(config.get("enable_bhop", enable_bhop))
+        globals()["player_fov"] = int(config.get("player_fov", player_fov))
+        globals()["fov_changer_option"] = bool(config.get("fov_changer_option", fov_changer_option))
+        globals()["enable_bomb_timer"] = bool(config.get("enable_bomb_timer", enable_bomb_timer))
+        globals()["discord_presence_enabled"] = bool(config.get("discord_presence_enabled", discord_presence_enabled))
+        
+        current_config_name = name
+        return True
+        
+    except Exception as e:
+        print(f"Error loading config {name}: {e}")
+        return False
+
+def delete_config(name: str):
+    """Delete a configuration file"""
+    config_path = os.path.join(CONFIG_DIR, f"{name}.json")
+    if os.path.exists(config_path):
+        os.remove(config_path)
+        load_configs_list()
+        return True
+    return False
+
+def load_configs_list():
+    """Load list of available configurations"""
+    global configs
+    configs.clear()
+    
+    if not os.path.exists(CONFIG_DIR):
+        return
+    
+    for filename in os.listdir(CONFIG_DIR):
+        if filename.endswith('.json'):
+            name = filename[:-5]  # Remove .json extension
+            config_path = os.path.join(CONFIG_DIR, filename)
+            try:
+                with open(config_path, 'r') as f:
+                    configs[name] = json.load(f)
+            except:
+                pass
+
 def main():
 	try:
 		pm = pymem.Pymem("cs2.exe")
@@ -657,8 +795,11 @@ def main():
 	print("[*] Getting Offsets")
 	offsets = get_offsets()
 
+	# Load configurations at startup
+	load_configs_list()
+
 	threading.Thread(target=GUI, daemon=True).start()
-	threading.Thread(target=discord_rpc_thread, daemon=True).start()
+	# threading.Thread(target=discord_rpc_thread, daemon=True).start()
 
 	threading.Thread(target=triggerbot_thread, args=(memf, client, offsets), daemon=True).start()
 	threading.Thread(target=anti_flash_thread, args=(memf, client, offsets), daemon=True).start()
@@ -768,6 +909,8 @@ def main():
 		pme.end_drawing()
 
 def GUI():
+	global visibility_check, team_check, skeleton_rendering, box_rendering, tracer_rendering, name_rendering, health_bar_rendering, health_text_rendering, t_color, ct_color, enable_triggerbot, enable_triggerbot_keycheck, triggerbot_key, triggerbot_team_check, anti_flashbang, enable_bhop, player_fov, fov_changer_option, enable_bomb_timer, discord_presence_enabled, enable_aimbot, aimbot_team_check, aimbot_fov, aimbot_smoothness, aim_position
+
 	def on_closing():
 		os._exit(0)
 
@@ -849,6 +992,92 @@ def GUI():
 
 		return slider, value_label
 
+	# Config Management Functions for GUI
+	def refresh_config_list():
+		"""Refresh the configuration list dropdown"""
+		load_configs_list()
+		config_dropdown.configure(values=list(configs.keys()))
+		if configs:
+			config_dropdown.set(list(configs.keys())[0])
+
+	def on_save_config():
+		"""Save current configuration"""
+		name = config_name_var.get().strip()
+		if name:
+			save_config(name)
+			config_status_label.configure(text=f"Config '{name}' saved!")
+			refresh_config_list()
+		else:
+			config_status_label.configure(text="Please enter a config name!")
+
+	def on_load_config():
+		"""Load selected configuration"""
+		name = config_list_var.get()
+		if name and name in configs:
+			if load_config(name):
+				config_status_label.configure(text=f"Config '{name}' loaded!")
+				# Force GUI update
+				update_all_gui_elements()
+			else:
+				config_status_label.configure(text=f"Error loading '{name}'!")
+		else:
+			config_status_label.configure(text="Please select a config!")
+
+	def on_delete_config():
+		"""Delete selected configuration"""
+		name = config_list_var.get()
+		if name and name in configs:
+			if delete_config(name):
+				config_status_label.configure(text=f"Config '{name}' deleted!")
+				refresh_config_list()
+			else:
+				config_status_label.configure(text=f"Error deleting '{name}'!")
+		else:
+			config_status_label.configure(text="Please select a config!")
+
+	def update_all_gui_elements():
+		"""Update all GUI elements to match current settings"""
+		# ESP Tab
+		checkbox_1_var.set(skeleton_rendering)
+		checkbox_2_var.set(box_rendering)
+		checkbox_3_var.set(tracer_rendering)
+		checkbox_4_var.set(name_rendering)
+		checkbox_5_var.set(health_bar_rendering)
+		checkbox_6_var.set(health_text_rendering)
+		checkbox_7_var.set(team_check)
+		update_color_display(t_color_display, t_color)
+		update_color_display(ct_color_display, ct_color)
+		
+		# Triggerbot Tab
+		triggerbot_enable_var.set(enable_triggerbot)
+		triggerbot_team_check_var.set(triggerbot_team_check)
+		triggerbot_key_check_var.set(enable_triggerbot_keycheck)
+		triggerbot_key_var.set(f"Trigger Key: {triggerbot_key}")
+		
+		# Aimbot Tab
+		enable_aimbot_var.set(enable_aimbot)
+		aimbot_fov_var.set(enable_aimbot_fov)
+		aimbot_team_check_var.set(aimbot_team_check)
+		visibility_check_var.set(visibility_check)
+		
+		# Find bone name from value
+		bone_name = next((k for k, v in bones.items() if v == aim_position), "head")
+		optionmenu_var.set(bone_name)
+		
+		aimbot_fov_slider.set(aimbot_fov)
+		aimbot_fov_value_label.configure(text=f"Aimbot FOV: {aimbot_fov}")
+		smoothness_slider.set(aimbot_smoothness)
+		smoothness_value_label.configure(text=f"Aimbot Smoothness: {aimbot_smoothness}")
+		
+		# Misc Tab
+		anti_flashbang_var.set(anti_flashbang)
+		enable_bhop_var.set(enable_bhop)
+		enable_bomb_timer_var.set(enable_bomb_timer)
+		discord_presence_var.set(discord_presence_enabled)
+		fov_changer_var.set(fov_changer_option)
+		fov_slider.set(player_fov)
+		fov_value_label.configure(text=f"FOV: {player_fov}")
+
 	root = ctk.CTk()
 	root.title("cs2py")
 	root.iconbitmap("cs2py.ico")
@@ -869,6 +1098,7 @@ def GUI():
 	tab_triggerbot = tabview.add("Triggerbot")
 	tab_aimbot = tabview.add("Aimbot")
 	tab_misc = tabview.add("Misc")
+	tab_config = tabview.add("Config Manager")
 
 	def create_checkbox_with_outline(parent, text, variable, command):
 		frame = ctk.CTkFrame(master=parent, corner_radius=8, bg_color="#2e2e2e", border_color="#444444", border_width=2)
@@ -962,16 +1192,13 @@ def GUI():
 	enable_aimbot_var = ctk.BooleanVar(value=enable_aimbot)
 	create_checkbox_with_outline(tab_aimbot, "Enable Aimbot", enable_aimbot_var, lambda: checkbox_action('enable_aimbot', enable_aimbot_var))
 
-	#recoil_control_var = ctk.BooleanVar(value=recoil_control)
-	#create_checkbox_with_outline(tab_aimbot, "Recoil Control", recoil_control_var, lambda: checkbox_action('recoil_control', recoil_control_var))
-
 	aimbot_fov_var = ctk.BooleanVar(value=enable_aimbot_fov)
 	create_checkbox_with_outline(tab_aimbot, "Enable Fov", aimbot_fov_var, lambda: checkbox_action('enable_aimbot_fov', aimbot_fov_var))
 
 	aimbot_team_check_var = ctk.BooleanVar(value=aimbot_team_check)
 	create_checkbox_with_outline(tab_aimbot, "Enable Team Check", aimbot_team_check_var, lambda: checkbox_action('aimbot_team_check', aimbot_team_check_var))
 
-	visibility_check_var = ctk.BooleanVar(value=False)
+	visibility_check_var = ctk.BooleanVar(value=visibility_check)
 	visibility_check = create_checkbox_with_outline(tab_aimbot, "Visibility Check", visibility_check_var, lambda: checkbox_action('visibility_check', visibility_check_var))
 	visibility_check.pack(padx=10, pady=5, anchor="w", fill="x")
 
@@ -1001,11 +1228,64 @@ def GUI():
 	discord_presence_var = ctk.BooleanVar(value=discord_presence_enabled)
 	create_checkbox_with_outline(tab_misc, "Discord RPC", discord_presence_var, lambda: checkbox_action('discord_presence_enabled', discord_presence_var))
 
-
 	fov_changer_var = ctk.BooleanVar(value=fov_changer_option)
 	create_checkbox_with_outline(tab_misc, "Enable FOV Changer", fov_changer_var, lambda: checkbox_action('fov_changer_option', fov_changer_var))
 
 	fov_slider, fov_value_label = create_slider_with_label(tab_misc, player_fov, fov_slider_action, "FOV", 30, 170, 1)
+
+	# Config Manager Tab
+	config_name_var = StringVar(value="default")
+	config_list_var = StringVar(value="")
+
+	# Config Name Frame
+	config_name_frame = ctk.CTkFrame(master=tab_config, corner_radius=8, bg_color="#2e2e2e")
+	config_name_frame.pack(padx=10, pady=5, fill="x")
+	
+	ctk.CTkLabel(master=config_name_frame, text="Config Name:", font=("Segoe UI", 12), text_color="#FFFFFF").pack(side="left", padx=5)
+	config_name_entry = ctk.CTkEntry(master=config_name_frame, textvariable=config_name_var, width=150)
+	config_name_entry.pack(side="left", padx=5)
+	
+	save_config_button = ctk.CTkButton(master=config_name_frame, text="Save Config", width=100,
+									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8,
+									  command=on_save_config)
+	save_config_button.pack(side="left", padx=5)
+	
+	# Config List Frame
+	config_list_frame = ctk.CTkFrame(master=tab_config, corner_radius=8, bg_color="#2e2e2e")
+	config_list_frame.pack(padx=10, pady=5, fill="x")
+	
+	ctk.CTkLabel(master=config_list_frame, text="Saved Configs:", font=("Segoe UI", 12), text_color="#FFFFFF").pack(anchor="w", padx=5)
+	
+	config_dropdown = ctk.CTkOptionMenu(master=config_list_frame, variable=config_list_var,
+									   fg_color="#6A0D91", button_color="#8A2BE2", 
+									   button_hover_color="#6912BF", dropdown_fg_color="#2e2e2e",
+									   width=200)
+	config_dropdown.pack(padx=5, pady=5, anchor="w")
+	
+	config_buttons_frame = ctk.CTkFrame(master=tab_config, corner_radius=8, bg_color="#2e2e2e")
+	config_buttons_frame.pack(padx=10, pady=5, fill="x")
+	
+	load_config_button = ctk.CTkButton(master=config_buttons_frame, text="Load Config", width=100,
+									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8,
+									  command=on_load_config)
+	load_config_button.pack(side="left", padx=5)
+	
+	delete_config_button = ctk.CTkButton(master=config_buttons_frame, text="Delete Config", width=100,
+										fg_color="#D32F2F", hover_color="#FF5252", corner_radius=8,
+										command=on_delete_config)
+	delete_config_button.pack(side="left", padx=5)
+	
+	refresh_config_button = ctk.CTkButton(master=config_buttons_frame, text="Refresh List", width=100,
+										 fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8,
+										 command=refresh_config_list)
+	refresh_config_button.pack(side="left", padx=5)
+	
+	# Status label
+	config_status_label = ctk.CTkLabel(master=tab_config, text="", font=("Segoe UI", 12), text_color="#FFFFFF")
+	config_status_label.pack(padx=10, pady=5)
+
+	# Load initial config list
+	refresh_config_list()
 
 	def open_github():
 		open_url("https://github.com/GsDeluxe/cs2py")
@@ -1015,18 +1295,6 @@ def GUI():
 								 bg_color="#2e2e2e", font=("Segoe UI", 11), text_color="#FFFFFF", 
 								 border_color="#8A2BE2", border_width=2, command=open_github)
 	github_button.pack(side="left", padx=8, pady=10)
-
-	load_config_button = ctk.CTkButton(master=tab_misc, text="Soon", width=100, 
-									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
-									  bg_color="#2e2e2e", font=("Segoe UI", 11), text_color="#FFFFFF", 
-									  border_color="#8A2BE2", border_width=2)
-	load_config_button.pack(side="left", padx=8, pady=10)
-
-	save_config_button = ctk.CTkButton(master=tab_misc, text="Soon", width=100, 
-									  fg_color="#6A0D91", hover_color="#8A2BE2", corner_radius=8, 
-									  bg_color="#2e2e2e", font=("Segoe UI", 11), text_color="#FFFFFF", 
-									  border_color="#8A2BE2", border_width=2)
-	save_config_button.pack(side="left", padx=8, pady=10)
 
 	root.mainloop()
 
