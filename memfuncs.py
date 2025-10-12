@@ -2,10 +2,11 @@ import pymem
 import struct
 from pymem import Pymem
 from pymem.process import module_from_name
-from ext_types import * 
+from ext_types import *
+
 
 class memfunc:
-    
+
     def __init__(self, proc):
         self.proc = proc
 
@@ -16,7 +17,7 @@ class memfunc:
     def GetModuleBase(self, modulename):
         if not modulename or not self.proc:
             return None
-        
+
         module = module_from_name(self.proc.process_handle, modulename)
         if module:
             return module.lpBaseOfDll
@@ -46,23 +47,23 @@ class memfunc:
 
     def ReadVec(self, address, offset=0):
         bytes_ = self.ReadBytes(address + offset, 12)
-        x, y, z = struct.unpack('fff', bytes_)
+        x, y, z = struct.unpack("fff", bytes_)
         return Vector3(x, y, z)
 
     def ReadShort(self, address, offset=0):
         bytes_ = self.ReadBytes(address + offset, 2)
-        return struct.unpack('h', bytes_)[0]
+        return struct.unpack("h", bytes_)[0]
 
     def ReadUShort(self, address, offset=0):
         bytes_ = self.ReadBytes(address + offset, 2)
-        return struct.unpack('H', bytes_)[0]
+        return struct.unpack("H", bytes_)[0]
 
     def ReadUInt(self, address, offset=0):
         return self.proc.read_uint(address + offset)
 
     def ReadULong(self, address, offset=0):
         bytes_ = self.ReadBytes(address + offset, 8)
-        return struct.unpack('Q', bytes_)[0]
+        return struct.unpack("Q", bytes_)[0]
 
     def ReadBool(self, address, offset=0):
         return self.proc.read_bool(address + offset)
@@ -72,22 +73,22 @@ class memfunc:
 
     def ReadChar(self, address, offset=0):
         bytes_ = self.ReadBytes(address + offset, 2)
-        return struct.unpack('c', bytes_)[0].decode('utf-8')
+        return struct.unpack("c", bytes_)[0].decode("utf-8")
 
     def ReadMatrix(self, address):
         bytes_ = self.ReadBytes(address, 4 * 16)
-        matrix = struct.unpack('16f', bytes_)
+        matrix = struct.unpack("16f", bytes_)
         return matrix
 
     def WriteInt(self, address, value, offset=0):
         return self.proc.write_int(address + offset, value)
 
     def WriteShort(self, address, value, offset=0):
-        bytes_ = struct.pack('h', value)
+        bytes_ = struct.pack("h", value)
         return self.WriteBytes(address + offset, bytes_)
 
     def WriteUShort(self, address, value, offset=0):
-        bytes_ = struct.pack('H', value)
+        bytes_ = struct.pack("H", value)
         return self.WriteBytes(address + offset, bytes_)
 
     def WriteUInt(self, address, value, offset=0):
@@ -97,7 +98,7 @@ class memfunc:
         return self.proc.write_longlong(address + offset, value)
 
     def WriteULong(self, address, value, offset=0):
-        bytes_ = struct.pack('Q', value)
+        bytes_ = struct.pack("Q", value)
         return self.WriteBytes(address + offset, bytes_)
 
     def WriteFloat(self, address, value, offset=0):
@@ -113,7 +114,5 @@ class memfunc:
         return self.proc.write_string(address + offset, value)
 
     def WriteVec(self, address, value, offset=0):
-        bytes_ = struct.pack('fff', value.x, value.y, value.z)
+        bytes_ = struct.pack("fff", value.x, value.y, value.z)
         return self.WriteBytes(address + offset, bytes_)
-
-
