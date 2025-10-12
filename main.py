@@ -305,7 +305,7 @@ def get_offsets() -> Offset:
 		m_boneArray=128,
 		m_nodeToWorld=oc.get("CGameSceneNode", "m_nodeToWorld"),
 		m_sSanitizedPlayerName=oc.get("CCSPlayerController", "m_sSanitizedPlayerName"),
-		m_iIDEntIndex=oc.get("C_CSPlayerPawnBase", "m_iIDEntIndex"),
+		m_iIDEntIndex=oc.get("C_CSPlayerPawn", "m_iIDEntIndex"),
 		m_flFlashMaxAlpha=oc.get("C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
 		m_fFlags=oc.get("C_BaseEntity", "m_fFlags"),
 		m_iFOV=oc.get("CCSPlayerBase_CameraServices", "m_iFOV"),
@@ -1032,4 +1032,5 @@ def GUI():
 
 if __name__ == "__main__":
 	print("          ____              \n  ___ ___|___ \\ _ __  _   _ \n / __/ __| __) | '_ \\| | | |\n| (__\\__ \\/ __/| |_) | |_| |\n \\___|___/_____| .__/ \\__, |\n               |_|    |___/ \n\n             - By GsDeluxe")
+
 	main()
