@@ -38,6 +38,6 @@ python main.py
 
 ![VISUALS_IMG](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_view.png)
 
-| Visuals | Triggerbot | Aimbot | Misc |
-|:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
-| ![Visuals](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_tab.png) | ![Triggerbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/triggerbot_tab.png) | ![Aimbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/aimbot_tab.png) | ![Misc](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/misc_tab.png) |
+| Aimbot | Visuals | Triggerbot | Recoil control | Colors | Misc |
+|:------:|:-------:|:-----------:|:---------------:|:------:|:----:|
+| ![Aimbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/aimbot_tab.png) | ![Visuals](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_tab.png) | ![Triggerbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/triggerbot_tab.png) | ![Recoil control](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/rcs_tab.png) | ![Colors](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/colors_tab.png) | ![Misc](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/misc_tab.png) |
