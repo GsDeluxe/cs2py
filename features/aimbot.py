@@ -25,7 +25,7 @@ def GetPlayers(processHandle, clientBaseAddress, LocalPlayer, AimBoneID, Options
 			if not is_valid_address(ListEntry):
 				continue
 
-			currentController = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry + 120 * (i & 0x1FF))
+			currentController = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry + 112 * (i & 0x1FF))
 			if not is_valid_address(currentController):
 				continue
 
@@ -37,7 +37,7 @@ def GetPlayers(processHandle, clientBaseAddress, LocalPlayer, AimBoneID, Options
 			if not is_valid_address(ListEntry2):
 				continue
 
-			currentPawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry2 + 0x78 * (pawnHandle & 0x1FF))
+			currentPawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry2 + 0x70 * (pawnHandle & 0x1FF))
 			if not is_valid_address(currentPawn) or currentPawn == LocalPlayer.pawnAddress:
 				continue
 
@@ -123,7 +123,7 @@ def Aimbot_Update(processHandle, clientBaseAddress, Offsets, Options, ARDUINO_HA
 				if not is_valid_address(listEntry):
 					continue
 
-				controller = memfuncs.ProcMemHandler.ReadPointer(processHandle, listEntry + 120 * (i & 0x1FF))
+				controller = memfuncs.ProcMemHandler.ReadPointer(processHandle, listEntry + 112 * (i & 0x1FF))
 				if not is_valid_address(controller):
 					continue
 
@@ -135,7 +135,7 @@ def Aimbot_Update(processHandle, clientBaseAddress, Offsets, Options, ARDUINO_HA
 				if not is_valid_address(listEntry2):
 					continue
 
-				pawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, listEntry2 + 0x78 * (pawnHandle & 0x1FF))
+				pawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, listEntry2 + 0x70 * (pawnHandle & 0x1FF))
 				if not is_valid_address(pawn):
 					continue
 

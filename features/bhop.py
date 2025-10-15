@@ -18,7 +18,7 @@ def Bhop_Update(processHandle, clientBaseAddress, Offsets):
 
         entityList = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwEntityList)
         listEntry = memfuncs.ProcMemHandler.ReadPointer(processHandle, entityList + (0x8 * ((localPawn & 0x7FFF) >> 9) + 0x10))
-        localPawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, listEntry + (120 * (localPawn & 0x1FF)))
+        localPawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, listEntry + (112 * (localPawn & 0x1FF)))
         
         if localPawn:
             flags = memfuncs.ProcMemHandler.ReadInt(processHandle, localPawn + Offsets.offset.m_fFlags)

@@ -71,7 +71,7 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 			if not ListEntry:
 				continue
 
-			controller = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry + 120 * (i & 0x1FF))
+			controller = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry + 112 * (i & 0x1FF))
 			if not controller or controller == localPlayerEnt_controllerAddress:
 				continue
 
@@ -83,7 +83,7 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 			if not ListEntry2:
 				continue
 
-			pawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry2 + 0x78 * (pawnHandle & 0x1FF))
+			pawn = memfuncs.ProcMemHandler.ReadPointer(processHandle, ListEntry2 + 0x70 * (pawnHandle & 0x1FF))
 			if not pawn or pawn == localPlayerEnt_pawnAddress:
 				continue
 
