@@ -23,7 +23,7 @@ def Triggerbot_AntiFlash_Update(processHandle, clientBaseAddress, Offsets, Optio
 			if (localPlayerID > 0):
 				entityList = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwEntityList)
 				entityListEntry = memfuncs.ProcMemHandler.ReadPointer(processHandle, entityList + 0x8 * (localPlayerID >> 9) + 0x10)
-				TargetEntity = memfuncs.ProcMemHandler.ReadPointer(processHandle, entityListEntry + 120 * (localPlayerID & 0x1FF))
+				TargetEntity = memfuncs.ProcMemHandler.ReadPointer(processHandle, entityListEntry + 112 * (localPlayerID & 0x1FF))
 
 				TargetEntityTeam = memfuncs.ProcMemHandler.ReadInt(processHandle, TargetEntity + Offsets.offset.m_iTeamNum)
 				localPlayerTeam = memfuncs.ProcMemHandler.ReadInt(processHandle, localPlayer + Offsets.offset.m_iTeamNum)
