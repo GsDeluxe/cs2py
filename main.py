@@ -1,5 +1,5 @@
 import globals
-from functions import memfuncs
+from functions import memfuncs, autoupdate
 
 from features import aimbot
 from features import combined
@@ -80,6 +80,8 @@ def LoadConfig():
 if __name__ == "__main__":
 
 	print("          ____              \n  ___ ___|___ \\ _ __  _   _ \n / __/ __| __) | '_ \\| | | |\n| (__\\__ \\/ __/| |_) | |_| |\n \\___|___/_____| .__/ \\__, |\n               |_|    |___/ \n\n             - By GsDeluxe")
+	
+	autoupdate.check_and_update()
 
 	win32process.SetPriorityClass(win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, True, win32api.GetCurrentProcessId()), win32process.HIGH_PRIORITY_CLASS)
 	multiprocessing.freeze_support()
