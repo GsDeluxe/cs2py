@@ -13,8 +13,6 @@ def FovChangerThreadFunction(Options, Offsets):
 	clientBaseAddress = memfuncs.GetModuleBase(modulename="client.dll", process_object=processHandle)
 
 	while True:
-		
-
 		localPlayer = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwLocalPlayerPawn)
 		if (not localPlayer): continue
 
@@ -23,16 +21,20 @@ def FovChangerThreadFunction(Options, Offsets):
 			currentFOV = memfuncs.ProcMemHandler.ReadInt(processHandle, cameraServices + Offsets.offset.m_iFOV)
 			isScopedDown = memfuncs.ProcMemHandler.ReadBool(processHandle, localPlayer + Offsets.offset.m_bIsScoped)
 
-			if ( not isScopedDown or currentFOV != Options["FovChangeSize"] or Options["EnableFovChanger"]):
-			
-				memfuncs.ProcMemHandler.WriteInt(processHandle, cameraServices + Offsets.offset.m_iFOV, Options["FovChangeSize"])
+			if isScopedDown:
+				pass  
 			else:
-				pass
-				memfuncs.ProcMemHandler.WriteInt(processHandle, cameraServices + Offsets.offset.m_iFOV, 90)
+				if Options["EnableFovChanger"]:
+					desiredFov = Options["FovChangeSize"]
+				else:
+					desiredFov = 90
+
+				if currentFOV != desiredFov:
+					memfuncs.ProcMemHandler.WriteInt(processHandle, cameraServices + Offsets.offset.m_iFOV, desiredFov)
+
 
 			if Options["EnableAntiFlashbang"]:
 				memfuncs.ProcMemHandler.WriteFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha, 255.0)
-				continue
 			else:
 				memfuncs.ProcMemHandler.WriteFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha, 0.0)
 
