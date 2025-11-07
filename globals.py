@@ -42,6 +42,7 @@ CHEAT_SETTINGS = {
     "EnableESPHealthBarRendering": True,
     "EnableESPHealthText": False,
     "EnableESPDistanceText": False,
+    "EnableFOVCircle": True,
 
     "EnableESPBombTimer": False,
     

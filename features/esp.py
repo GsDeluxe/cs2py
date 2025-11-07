@@ -150,8 +150,9 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 				draw_skeleton(pme, bones, boneConnections, color=color)
 		except:
 			continue
-
-	pme.draw_circle_lines(globals.SCREEN_WIDTH // 2, globals.SCREEN_HEIGHT // 2, Options["AimbotFOV"], pme.get_color(Options["FOV_color"]))
+		
+	if Options["EnableFOVCircle"]:
+		pme.draw_circle_lines(globals.SCREEN_WIDTH // 2, globals.SCREEN_HEIGHT // 2, Options["AimbotFOV"], pme.get_color(Options["FOV_color"]))
 
 	try:
 		if Options["EnableESPBombTimer"]:
@@ -186,4 +187,6 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 	except Exception:
 		pass
 
+
+	
 	pme.end_drawing()

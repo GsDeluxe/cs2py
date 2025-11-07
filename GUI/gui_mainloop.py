@@ -562,6 +562,8 @@ class CS2PY_GUI:
 					dpg.add_checkbox(label="Enable Health Text", default_value=self.config["EnableESPHealthText"], callback=lambda s, d: self.config.update({"EnableESPHealthText": d}))
 					dpg.add_checkbox(label="Enable Distance Text", default_value=self.config["EnableESPDistanceText"], callback=lambda s, d: self.config.update({"EnableESPDistanceText": d}))
 					dpg.add_separator()
+					dpg.add_checkbox(label="Enable FOV Circle", default_value=self.config["EnableFOVCircle"], callback=lambda s, d: self.config.update({"EnableFOVCircle": d}))
+					dpg.add_separator()
 					dpg.add_checkbox(label="Enable Bomb Timer", default_value=self.config["EnableESPBombTimer"], callback=lambda s, d: self.config.update({"EnableESPBombTimer": d}))
 
 				with dpg.tab(label="Triggerbot"):
