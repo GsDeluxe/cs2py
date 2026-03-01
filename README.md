@@ -40,7 +40,7 @@ python main.py
 
 | Aimbot | Visuals | Triggerbot | Recoil control | Colors | Misc |
 |:------:|:-------:|:-----------:|:---------------:|:------:|:----:|
+| ![Aimbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/aimbot_tab.png) | ![Visuals](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_tab.png) | ![Triggerbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/triggerbot_tab.png) | ![Recoil control](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/rcs_tab.png) | ![Colors](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/colors_tab.png) | ![Misc](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/misc_tab.png) |
 
 # Use at your own risk ⚠️
 I am not responsible for any misuse of this program, this is for educational and learning purposes
-| ![Aimbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/aimbot_tab.png) | ![Visuals](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/esp_tab.png) | ![Triggerbot](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/triggerbot_tab.png) | ![Recoil control](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/rcs_tab.png) | ![Colors](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/colors_tab.png) | ![Misc](https://raw.githubusercontent.com/GsDeluxe/cs2py/main/img/misc_tab.png) |
