@@ -208,7 +208,16 @@ def Aimbot_Update(processHandle, clientBaseAddress, Offsets, Options, ARDUINO_HA
 			shotsFired = memfuncs.ProcMemHandler.ReadInt(processHandle, localPawn + Offsets.offset.m_iShotsFired)
 			if shotsFired > 1 and Options["EnableRecoilControl"]:
 				globals.RCS_CTRL_BY_AIMBOT = True
-				punch = memfuncs.ProcMemHandler.ReadVec(processHandle, localPawn + Offsets.offset.m_aimPunchAngle)
+				aimPunchServices = memfuncs.ProcMemHandler.ReadPointer(processHandle, localPawn + Offsets.offset.m_pAimPunchServices)
+				cacheAimPunchAngleCount = memfuncs.ProcMemHandler.ReadULong(processHandle, aimPunchServices + (Offsets.offset.m_unpredictableBaseTick - 0x18))
+				cacheAimPunchAngleData = memfuncs.ProcMemHandler.ReadULong(processHandle, aimPunchServices + (Offsets.offset.m_unpredictableBaseTick - 0x18) + 0x08)
+
+				if cacheAimPunchAngleCount > 0 and cacheAimPunchAngleCount < 1000 and cacheAimPunchAngleData != 0:
+					lastElementAddr = cacheAimPunchAngleData + (cacheAimPunchAngleCount - 1) * (4 * 3) # sizeof(Vector3)
+					punch = memfuncs.ProcMemHandler.ReadVec(processHandle, lastElementAddr)
+				else:
+					punch = Vector3(0.0, 0.0, 0.0)
+
 				punchX = punch.x * 12.0
 				punchY = punch.y * 12.0
 				recoilSmooth = max(1.0, min(float(Options["RecoilControlSmoothing"]), 3.0))

@@ -22,8 +22,19 @@ def RecoilControl_Update(processHandle, clientBaseAddress, Offsets, Options, ARD
 			return
 
 		shotsFired = memfuncs.ProcMemHandler.ReadInt(processHandle, localPlayer + Offsets.offset.m_iShotsFired)
-		aimPunch_x = memfuncs.ProcMemHandler.ReadFloat(processHandle, localPlayer + Offsets.offset.m_aimPunchAngle)
-		aimPunch_y = memfuncs.ProcMemHandler.ReadFloat(processHandle, localPlayer + Offsets.offset.m_aimPunchAngle + 0x4)
+
+		aimPunchServices = memfuncs.ProcMemHandler.ReadPointer(processHandle, localPlayer + Offsets.offset.m_pAimPunchServices)
+		cacheAimPunchAngleCount = memfuncs.ProcMemHandler.ReadULong(processHandle, aimPunchServices + (Offsets.offset.m_unpredictableBaseTick - 0x18))
+		cacheAimPunchAngleData = memfuncs.ProcMemHandler.ReadULong(processHandle, aimPunchServices + (Offsets.offset.m_unpredictableBaseTick - 0x18) + 0x08)
+
+		if cacheAimPunchAngleCount > 0 and cacheAimPunchAngleCount < 1000 and cacheAimPunchAngleData != 0:
+			lastElementAddr = cacheAimPunchAngleData + (cacheAimPunchAngleCount - 1) * (4 * 3) # sizeof(Vector3)
+			punch = memfuncs.ProcMemHandler.ReadVec(processHandle, lastElementAddr)
+		else:
+			punch = Vector3(0.0, 0.0, 0.0)
+
+		aimPunch_x = punch.x
+		aimPunch_y = punch.y
 
 		sensitivityBase = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwSensitivity)
 		sensitivity = memfuncs.ProcMemHandler.ReadFloat(processHandle, sensitivityBase + Offsets.offset.dwSensitivity_sensitivity)

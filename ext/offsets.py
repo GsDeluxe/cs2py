@@ -40,7 +40,8 @@ class Offset:
 	m_bBombPlanted: int
 	
 	m_iShotsFired: int
-	m_aimPunchAngle: int
+	m_pAimPunchServices: int
+	m_unpredictableBaseTick: int
 	
 	m_bSpottedByMask: int
 	m_vecVelocity: int
@@ -139,7 +140,8 @@ def get_offsets() -> Offset:
 		m_bSpotted = oc.get("EntitySpottedState_t", "m_bSpotted"),
 		m_bBombPlanted = oc.get("C_CSGameRules", "m_bBombPlanted"),
 		m_iShotsFired = oc.get("C_CSPlayerPawn", "m_iShotsFired"),
-		m_aimPunchAngle = oc.get("C_CSPlayerPawn", "m_aimPunchAngle"),
+		m_pAimPunchServices = oc.get("C_CSPlayerPawn", "m_pAimPunchServices"),
+		m_unpredictableBaseTick = oc.get("CCSPlayer_AimPunchServices", "m_unpredictableBaseTick"),
 		
 		m_bSpottedByMask = oc.get("EntitySpottedState_t", "m_bSpottedByMask"),
 		m_vecVelocity = oc.get("C_BaseEntity", "m_vecVelocity"),
