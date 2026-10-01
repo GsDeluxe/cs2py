@@ -22,6 +22,7 @@ import serial.tools.list_ports
 
 import win32con, win32process, win32api
 import keyboard, os, json
+from types import SimpleNamespace
 
 keyboard.add_hotkey("end", callback=lambda: os._exit(0))
 keyboard.add_hotkey("insert", callback=lambda: gui_util.hide_dpg())
@@ -53,6 +54,9 @@ class ManagedConfig:
 	def get(self, key, default=None):
 		return self._dict.get(key, default)
 
+	def copy(self):
+		return self._dict.copy()
+
 	def items(self):
 		return self._dict.items()
 
@@ -75,7 +79,9 @@ def LoadConfig():
 			json.dump(globals.CHEAT_SETTINGS, fp, indent=4)
 	else:
 		with open(globals.SAVE_FILE, "r") as fp:
-			globals.CHEAT_SETTINGS = json.load(fp)
+			globals.CHEAT_SETTINGS.update(json.load(fp))
+
+
 
 if __name__ == "__main__":
 
@@ -106,13 +112,14 @@ if __name__ == "__main__":
 	SharedOptions_M = Manager.dict(globals.CHEAT_SETTINGS)
 	SharedOptions = ManagedConfig(SharedOptions_M, save_function=SaveConfig)
 
-	SharedOffsets = Manager.Namespace()
-	SharedOffsets.offset  = globals.GAME_OFFSETS
+	SharedOffsets = SimpleNamespace(offset=globals.GAME_OFFSETS)
 
 	GUI_proc = multiprocessing.Process(target=gui_mainloop.run_gui, args=(SharedOptions,))
 	GUI_proc.start()
 
 	esp.pme.overlay_init(title="ESP-Overlay")
+	esp.load_font(esp.pme, globals.FONT_FILE)
+	esp.load_font(esp.pme, globals.WEAPON_FONT_FILE, esp.WEAPON_FONT_ID)
 	fps = esp.pme.get_monitor_refresh_rate()
 	esp.pme.set_fps(fps)
 	width, height = esp.pme.get_screen_width(), esp.pme.get_screen_height()
@@ -132,13 +139,14 @@ if __name__ == "__main__":
 	discord_rpc_proc.start()
 
 	while esp.pme.overlay_loop():
-		esp.ESP_Update(ProcessObject, ClientModuleAddress, SharedOptions, SharedOffsets, SharedBombState)
+		Options = SharedOptions.copy()
+		esp.ESP_Update(ProcessObject, ClientModuleAddress, Options, SharedOffsets, SharedBombState)
 
-		if SharedOptions["EnableAimbot"] and win32api.GetAsyncKeyState(SharedOptions["AimbotKey"]) & 0x8000:
-			aimbot.Aimbot_Update(ProcessObject, ClientModuleAddress, SharedOffsets, SharedOptions, ARDUINO_HANDLE=ARDUINO_HANDLE)
+		if Options["EnableAimbot"] and win32api.GetAsyncKeyState(Options["AimbotKey"]) & 0x8000:
+			aimbot.Aimbot_Update(ProcessObject, ClientModuleAddress, SharedOffsets, Options, ARDUINO_HANDLE=ARDUINO_HANDLE)
 
-		if SharedOptions["EnableBhop"]:
+		if Options["EnableBhop"]:
 			bhop.Bhop_Update(ProcessObject, ClientModuleAddress, SharedOffsets)
 
-		combined.Triggerbot_AntiFlash_Update(ProcessObject, ClientModuleAddress, SharedOffsets, SharedOptions)
-		rcs.RecoilControl_Update(ProcessObject, ClientModuleAddress, SharedOffsets, SharedOptions, ARDUINO_HANDLE=ARDUINO_HANDLE)
+		combined.Triggerbot_AntiFlash_Update(ProcessObject, ClientModuleAddress, SharedOffsets, Options)
+		rcs.RecoilControl_Update(ProcessObject, ClientModuleAddress, SharedOffsets, Options, ARDUINO_HANDLE=ARDUINO_HANDLE)

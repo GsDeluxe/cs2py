@@ -18,8 +18,14 @@ python main.py
 
 ## Features
 
-- [x] Aimbot  
-- [x] ESP
+- [x] Aimbot
+- [x] Skeleton & Head Circle ESP  
+- [x] Full / Cornered Box ESP with Fill & Thickness  
+- [x] Player Info (Health, Armor, Money, Flags)  
+- [x] Weapon Icons  
+- [x] Smoke Timers  
+- [x] Team Check (ESP, Aimbot & Triggerbot)  
+- [x] Custom Fonts  
 - [x] Triggerbot  
 - [x] Recoil Control  
 - [x] Anti Flashbang  

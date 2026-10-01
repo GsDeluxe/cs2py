@@ -8,15 +8,17 @@ import globals
 import win32api, win32gui
 
 def Triggerbot_AntiFlash_Update(processHandle, clientBaseAddress, Offsets, Options):
-	localPlayer = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwLocalPlayerPawn)
-	if (not localPlayer): return
-
 	try:
-		if Options["EnableAntiFlashbang"]:
-			memfuncs.ProcMemHandler.WriteFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha, 0.0)
-			return
-		else:
-			memfuncs.ProcMemHandler.WriteFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha, 255.0)
+		localPlayer = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwLocalPlayerPawn)
+		if (not localPlayer): return
+
+		localHealth = memfuncs.ProcMemHandler.ReadInt(processHandle, localPlayer + Offsets.offset.m_iHealth)
+		if 0 < localHealth <= 100:
+			flashMaxAlpha = memfuncs.ProcMemHandler.ReadFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha)
+			if Options["EnableAntiFlashbang"] and flashMaxAlpha == 255.0:
+				memfuncs.ProcMemHandler.WriteFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha, 0.0)
+			elif not Options["EnableAntiFlashbang"] and flashMaxAlpha == 0.0:
+				memfuncs.ProcMemHandler.WriteFloat(processHandle, localPlayer + Offsets.offset.m_flFlashMaxAlpha, 255.0)
 
 		if (win32gui.GetWindowText(win32gui.GetForegroundWindow()) == "Counter-Strike 2" and Options["EnableTriggerbot"] and (win32api.GetAsyncKeyState(Options["TriggerbotKey"]) or not Options["EnableTriggerbotKeyCheck"])):
 			localPlayerID = memfuncs.ProcMemHandler.ReadInt(processHandle, localPlayer + Offsets.offset.m_iIDEntIndex)

@@ -77,7 +77,7 @@ class ProcMemHandler:
 
     @staticmethod
     def ReadString(proc, address, length):
-        return proc.read_string(address, length)
+        return proc.read_bytes(address, length).split(b"\x00", 1)[0].decode("utf-8", errors="ignore")
 
     @staticmethod
     def ReadChar(proc, address):

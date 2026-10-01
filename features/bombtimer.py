@@ -36,20 +36,14 @@ def BombTimerThread(SharedBombState, SharedOffsets):
                     time.sleep(0.05)
                     continue
 
-                SharedBombState.bombPlanted = True
-                total_time = 40
-                for elapsed in range(total_time):
-                    bombPlanted = memfuncs.ProcMemHandler.ReadBool(processHandle, gameRule + SharedOffsets.offset.m_bBombPlanted)
-                    if not bombPlanted:
-                        SharedBombState.bombPlanted = False
-                        SharedBombState.bombTimeLeft = -1
-                        break
+                plantedC4 = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + SharedOffsets.offset.dwPlantedC4)
+                globalVars = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + SharedOffsets.offset.dwGlobalVars)
+                bombTimeLeft = memfuncs.ProcMemHandler.ReadFloat(processHandle, plantedC4 + SharedOffsets.offset.m_flC4Blow) - memfuncs.ProcMemHandler.ReadFloat(processHandle, globalVars + 0x30)
+                bombDefused = memfuncs.ProcMemHandler.ReadBool(processHandle, plantedC4 + SharedOffsets.offset.m_bBombDefused)
 
-                    SharedBombState.bombTimeLeft = total_time - elapsed
-                    win32api.Sleep(1000)
-                if SharedBombState.bombPlanted:
-                    SharedBombState.bombPlanted = False
-                    SharedBombState.bombTimeLeft = -1
+                SharedBombState.bombPlanted = not bombDefused and 0 < bombTimeLeft < 60
+                SharedBombState.bombTimeLeft = bombTimeLeft if SharedBombState.bombPlanted else -1
+                time.sleep(0.05)
 
         except Exception:
             try:

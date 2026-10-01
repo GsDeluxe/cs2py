@@ -79,15 +79,15 @@ def GetPlayers(processHandle, clientBaseAddress, LocalPlayer, AimBoneID, Options
 
 	return entities
 
-def ResolveBoneToID(selectedIndex):
-	match selectedIndex:
-		case 0: 
+def ResolveBoneToID(selectedPosition):
+	match selectedPosition:
+		case "Head": 
 			return PLAYER_BONES["head"]
-		case 1: 
-			return PLAYER_BONES["seck_0"]
-		case 2: 
+		case "Neck": 
+			return PLAYER_BONES["neck_0"]
+		case "Torso": 
 			return PLAYER_BONES["spine_2"]
-		case 3: 
+		case "Leg": 
 			return PLAYER_BONES["leg_lower_L"]
 		case _:
 			return PLAYER_BONES["head"]

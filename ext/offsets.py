@@ -13,6 +13,8 @@ class Offset:
 	dwGameRules: int
 	dwSensitivity_sensitivity: int
 	dwSensitivity: int 
+	dwGlobalVars: int
+	dwPlantedC4: int
 
 
 	ButtonJump: int
@@ -45,6 +47,27 @@ class Offset:
 	
 	m_bSpottedByMask: int
 	m_vecVelocity: int
+
+	m_ArmorValue: int
+	m_bIsDefusing: int
+	m_pInGameMoneyServices: int
+	m_iAccount: int
+	m_pWeaponServices: int
+	m_hActiveWeapon: int
+	m_pItemServices: int
+	m_bHasHelmet: int
+	m_bHasDefuser: int
+	m_AttributeManager: int
+	m_Item: int
+	m_iItemDefinitionIndex: int
+	m_iFOVStart: int
+
+	m_designerName: int
+	m_nSmokeEffectTickBegin: int
+	m_bDidSmokeEffect: int
+	m_vSmokeDetonationPos: int
+	m_flC4Blow: int
+	m_bBombDefused: int
 	
 
 
@@ -115,6 +138,8 @@ def get_offsets() -> Offset:
 		dwGameRules = oc.offset("dwGameRules"),
 		dwSensitivity_sensitivity = oc.offset("dwSensitivity_sensitivity"),
 		dwSensitivity = oc.offset("dwSensitivity"),
+		dwGlobalVars = oc.offset("dwGlobalVars"),
+		dwPlantedC4 = oc.offset("dwPlantedC4"),
 		
 
 		ButtonJump=oc.button("jump"),
@@ -145,6 +170,27 @@ def get_offsets() -> Offset:
 		
 		m_bSpottedByMask = oc.get("EntitySpottedState_t", "m_bSpottedByMask"),
 		m_vecVelocity = oc.get("C_BaseEntity", "m_vecVelocity"),
+
+		m_ArmorValue = oc.get("C_CSPlayerPawn", "m_ArmorValue"),
+		m_bIsDefusing = oc.get("C_CSPlayerPawn", "m_bIsDefusing"),
+		m_pInGameMoneyServices = oc.get("CCSPlayerController", "m_pInGameMoneyServices"),
+		m_iAccount = oc.get("CCSPlayerController_InGameMoneyServices", "m_iAccount"),
+		m_pWeaponServices = oc.get("C_BasePlayerPawn", "m_pWeaponServices"),
+		m_hActiveWeapon = oc.get("CPlayer_WeaponServices", "m_hActiveWeapon"),
+		m_pItemServices = oc.get("C_BasePlayerPawn", "m_pItemServices"),
+		m_bHasHelmet = oc.get("CCSPlayer_ItemServices", "m_bHasHelmet"),
+		m_bHasDefuser = oc.get("CCSPlayer_ItemServices", "m_bHasDefuser"),
+		m_AttributeManager = oc.get("C_EconEntity", "m_AttributeManager"),
+		m_Item = oc.get("C_AttributeContainer", "m_Item"),
+		m_iItemDefinitionIndex = oc.get("C_EconItemView", "m_iItemDefinitionIndex"),
+		m_iFOVStart = oc.get("CCSPlayerBase_CameraServices", "m_iFOVStart"),
+
+		m_designerName = oc.get("CEntityIdentity", "m_designerName"),
+		m_nSmokeEffectTickBegin = oc.get("C_SmokeGrenadeProjectile", "m_nSmokeEffectTickBegin"),
+		m_bDidSmokeEffect = oc.get("C_SmokeGrenadeProjectile", "m_bDidSmokeEffect"),
+		m_vSmokeDetonationPos = oc.get("C_SmokeGrenadeProjectile", "m_vSmokeDetonationPos"),
+		m_flC4Blow = oc.get("C_PlantedC4", "m_flC4Blow"),
+		m_bBombDefused = oc.get("C_PlantedC4", "m_bBombDefused"),
 		
 	)
 	return offsets_obj

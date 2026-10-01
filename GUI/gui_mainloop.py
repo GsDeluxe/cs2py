@@ -1,6 +1,7 @@
 import dearpygui.dearpygui as dpg
 import threading, time, os
 import win32api, win32gui, win32con
+import globals
 
 KeyNames = [
 	"OFF",
@@ -349,6 +350,7 @@ class CS2PY_GUI:
 
 		self.init_context()
 		self.create_theme()
+		self.load_font()
 		self.config = config
 		self.build_ui()
 		self.add_event_handlers()
@@ -374,6 +376,18 @@ class CS2PY_GUI:
 			max_height=self.viewport_height
 		)
 		dpg.setup_dearpygui()
+
+	def load_font(self):
+		if os.path.exists(globals.FONT_FILE):
+			with dpg.font_registry():
+				dpg.bind_font(dpg.add_font(globals.FONT_FILE, 14))
+
+	def team_check_use(self, sender, app_data):
+		self.config.update({"EnableESPTeamCheck": app_data})
+		if app_data:
+			self.config.update({"EnableAimbotTeamCheck": True, "EnableTriggerbotTeamCheck": True})
+			dpg.set_value("EnableAimbotTeamCheck", True)
+			dpg.set_value("EnableTriggerbotTeamCheck", True)
 
 	def keybind_use(self, sender, app_data, user_data):
 		waiting_for_key = {}
@@ -543,32 +557,48 @@ class CS2PY_GUI:
 				
 				with dpg.tab(label="Aimbot"):
 					dpg.add_checkbox(label="Enable Aimbot", default_value=self.config["EnableAimbot"], callback=lambda s, d: self.config.update({"EnableAimbot": d}))
-					dpg.add_checkbox(label="Team Check##Aimbot", default_value=self.config["EnableAimbotTeamCheck"], callback=lambda s, d: self.config.update({"EnableAimbotTeamCheck": d}))
+					dpg.add_checkbox(label="Team Check##Aimbot", tag="EnableAimbotTeamCheck", default_value=self.config["EnableAimbotTeamCheck"], callback=lambda s, d: self.config.update({"EnableAimbotTeamCheck": d}))
 					dpg.add_checkbox(label="Visibility Check", default_value=self.config["EnableAimbotVisibilityCheck"], callback=lambda s, d: self.config.update({"EnableAimbotVisibilityCheck": d}))
 					dpg.add_slider_int(label="Aimbot FOV", default_value=self.config["AimbotFOV"], min_value=50, max_value=200, callback=lambda s, d: self.config.update({"AimbotFOV": d}))
 					dpg.add_slider_int(label="Aimbot Smoothing", default_value=self.config["AimbotSmoothing"], min_value=1, max_value=10, callback=lambda s, d: self.config.update({"AimbotSmoothing": d}))
 					dpg.add_checkbox(label="Prediction (Velocity-based)", default_value=self.config["EnableAimbotPrediction"], callback=lambda s, d: self.config.update({"EnableAimbotPrediction": d}))
-					dpg.add_combo(label="Aim Position", items=["Head", "Neck", "Torso", "Leg"], default_value="Head", callback=lambda s, d: self.config.update({"AimPosition": d}))
+					dpg.add_combo(label="Aim Position", items=["Head", "Neck", "Torso", "Leg"], default_value=self.config["AimPosition"], callback=lambda s, d: self.config.update({"AimPosition": d}))
 					dpg.add_text("Aimbot HotKey")
 					dpg.add_button(label=KeyNames[self.config["AimbotKey"]] if self.config["AimbotKey"] < len(KeyNames) else f"Unknown({self.config['AimbotKey']})", user_data="AimbotKey", callback=self.keybind_use)
 
 				with dpg.tab(label="ESP & Visuals"):
-					dpg.add_checkbox(label="Enable ESP Team Check", default_value=self.config["EnableESPTeamCheck"], callback=lambda s, d: self.config.update({"EnableESPTeamCheck": d}))
-					dpg.add_checkbox(label="Enable Skeleton Rendering", default_value=self.config["EnableESPSkeletonRendering"], callback=lambda s, d: self.config.update({"EnableESPSkeletonRendering": d}))
-					dpg.add_checkbox(label="Enable Box Rendering", default_value=self.config["EnableESPBoxRendering"], callback=lambda s, d: self.config.update({"EnableESPBoxRendering": d}))
-					dpg.add_checkbox(label="Enable Tracer Rendering", default_value=self.config["EnableESPTracerRendering"], callback=lambda s, d: self.config.update({"EnableESPTracerRendering": d}))
-					dpg.add_checkbox(label="Enable Name Rendering", default_value=self.config["EnableESPHealthBarRendering"], callback=lambda s, d: self.config.update({"EnableESPHealthBarRendering": d}))
-					dpg.add_checkbox(label="Enable Health Bar Rendering", default_value=self.config["EnableESPNameText"], callback=lambda s, d: self.config.update({"EnableESPNameText": d}))
-					dpg.add_checkbox(label="Enable Health Text", default_value=self.config["EnableESPHealthText"], callback=lambda s, d: self.config.update({"EnableESPHealthText": d}))
-					dpg.add_checkbox(label="Enable Distance Text", default_value=self.config["EnableESPDistanceText"], callback=lambda s, d: self.config.update({"EnableESPDistanceText": d}))
-					dpg.add_separator()
-					dpg.add_checkbox(label="Enable FOV Circle", default_value=self.config["EnableFOVCircle"], callback=lambda s, d: self.config.update({"EnableFOVCircle": d}))
-					dpg.add_separator()
-					dpg.add_checkbox(label="Enable Bomb Timer", default_value=self.config["EnableESPBombTimer"], callback=lambda s, d: self.config.update({"EnableESPBombTimer": d}))
+					with dpg.group(horizontal=True, horizontal_spacing=30):
+						with dpg.group():
+							dpg.add_checkbox(label="Enable ESP Team Check", default_value=self.config["EnableESPTeamCheck"], callback=self.team_check_use)
+							dpg.add_checkbox(label="Enable Skeleton Rendering", default_value=self.config["EnableESPSkeletonRendering"], callback=lambda s, d: self.config.update({"EnableESPSkeletonRendering": d}))
+							dpg.add_checkbox(label="Enable Head Circle", default_value=self.config["EnableESPHeadCircle"], callback=lambda s, d: self.config.update({"EnableESPHeadCircle": d}))
+							dpg.add_checkbox(label="Enable Box Rendering", default_value=self.config["EnableESPBoxRendering"], callback=lambda s, d: self.config.update({"EnableESPBoxRendering": d}))
+							dpg.add_checkbox(label="Enable Box Fill", default_value=self.config["EnableESPBoxFill"], callback=lambda s, d: self.config.update({"EnableESPBoxFill": d}))
+							dpg.add_checkbox(label="Enable Tracer Rendering", default_value=self.config["EnableESPTracerRendering"], callback=lambda s, d: self.config.update({"EnableESPTracerRendering": d}))
+							dpg.add_checkbox(label="Enable Name Rendering", default_value=self.config["EnableESPNameText"], callback=lambda s, d: self.config.update({"EnableESPNameText": d}))
+							dpg.add_checkbox(label="Enable Health Bar Rendering", default_value=self.config["EnableESPHealthBarRendering"], callback=lambda s, d: self.config.update({"EnableESPHealthBarRendering": d}))
+
+						with dpg.group():
+							dpg.add_checkbox(label="Enable Health Text", default_value=self.config["EnableESPHealthText"], callback=lambda s, d: self.config.update({"EnableESPHealthText": d}))
+							dpg.add_checkbox(label="Enable Distance Text", default_value=self.config["EnableESPDistanceText"], callback=lambda s, d: self.config.update({"EnableESPDistanceText": d}))
+							dpg.add_checkbox(label="Enable Armor Text", default_value=self.config["EnableESPArmorText"], callback=lambda s, d: self.config.update({"EnableESPArmorText": d}))
+							dpg.add_checkbox(label="Enable Money Text", default_value=self.config["EnableESPMoneyText"], callback=lambda s, d: self.config.update({"EnableESPMoneyText": d}))
+							dpg.add_checkbox(label="Enable Weapon Icon", default_value=self.config["EnableESPWeaponText"], callback=lambda s, d: self.config.update({"EnableESPWeaponText": d}))
+							dpg.add_checkbox(label="Enable Flags Text", default_value=self.config["EnableESPFlagsText"], callback=lambda s, d: self.config.update({"EnableESPFlagsText": d}))
+
+						with dpg.group(width=120):
+							dpg.add_combo(label="Box Style", items=["Full", "Cornered"], default_value=self.config["ESPBoxStyle"], callback=lambda s, d: self.config.update({"ESPBoxStyle": d}))
+							dpg.add_slider_float(label="Box Thickness", default_value=float(self.config["ESPBoxThickness"]), min_value=1.0, max_value=5.0, format="%.1f", callback=lambda s, d: self.config.update({"ESPBoxThickness": float(d)}))
+							dpg.add_slider_float(label="Skeleton Thickness", default_value=float(self.config["ESPSkeletonThickness"]), min_value=1.0, max_value=5.0, format="%.1f", callback=lambda s, d: self.config.update({"ESPSkeletonThickness": float(d)}))
+							dpg.add_slider_float(label="Box Fill Opacity", default_value=float(self.config["ESPBoxFillAlpha"]), min_value=0.05, max_value=1.0, format="%.2f", callback=lambda s, d: self.config.update({"ESPBoxFillAlpha": float(d)}))
+							dpg.add_separator()
+							dpg.add_checkbox(label="Enable FOV Circle", default_value=self.config["EnableFOVCircle"], callback=lambda s, d: self.config.update({"EnableFOVCircle": d}))
+							dpg.add_checkbox(label="Enable Bomb Timer", default_value=self.config["EnableESPBombTimer"], callback=lambda s, d: self.config.update({"EnableESPBombTimer": d}))
+							dpg.add_checkbox(label="Enable Grenade Timers", default_value=self.config["EnableESPGrenadeTimers"], callback=lambda s, d: self.config.update({"EnableESPGrenadeTimers": d}))
 
 				with dpg.tab(label="Triggerbot"):
 					dpg.add_checkbox(label="Enable Trigger Bot", default_value=self.config["EnableTriggerbot"], callback=lambda s, d: self.config.update({"EnableTriggerbot": d}))
-					dpg.add_checkbox(label="Team Check##Triggerbot", default_value=self.config["EnableTriggerbotTeamCheck"], callback=lambda s, d: self.config.update({"EnableTriggerbotTeamCheck": d}))
+					dpg.add_checkbox(label="Team Check##Triggerbot", tag="EnableTriggerbotTeamCheck", default_value=self.config["EnableTriggerbotTeamCheck"], callback=lambda s, d: self.config.update({"EnableTriggerbotTeamCheck": d}))
 					dpg.add_checkbox(label="Key Check", default_value=self.config["EnableTriggerbotKeyCheck"], callback=lambda s, d: self.config.update({"EnableTriggerbotKeyCheck": d}))
 					dpg.add_text("Triggerbot HotKey")
 					dpg.add_button(label=KeyNames[self.config["TriggerbotKey"]] if self.config["TriggerbotKey"] < len(KeyNames) else f"Unknown({self.config['TriggerbotKey']})", user_data="TriggerbotKey", callback=self.keybind_use)
@@ -584,6 +614,7 @@ class CS2PY_GUI:
 					dpg.add_separator()
 					dpg.add_text("Misc Colors")
 					dpg.add_color_picker(label="FOV Color", default_value=self.hex_to_rgb(self.config["FOV_color"]), no_alpha=True, no_inputs=True, no_side_preview=True, no_small_preview=True, width=75, height=75, callback=lambda s, d: self.config.update({"FOV_color": self.rgb_to_hex(d)}))
+					dpg.add_color_picker(label="Box Fill Color", default_value=self.hex_to_rgb(self.config["BoxFill_color"]), no_alpha=True, no_inputs=True, no_side_preview=True, no_small_preview=True, width=75, height=75, callback=lambda s, d: self.config.update({"BoxFill_color": self.rgb_to_hex(d)}))
 
 				with dpg.tab(label="Misc"):
 					dpg.add_checkbox(label="Enable Anti Flashbang", default_value=self.config["EnableAntiFlashbang"], callback=lambda s, d: self.config.update({"EnableAntiFlashbang": d}))

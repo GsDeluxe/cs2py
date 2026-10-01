@@ -10,6 +10,8 @@ SCREEN_HEIGHT = win32api.GetSystemMetrics(1)
 GAME_OFFSETS = offsets.get_offsets()
 
 SAVE_FILE = os.path.join(os.getcwd(), "settings.json")
+FONT_FILE = os.path.join(os.getcwd(), "fonts", "font.ttf")
+WEAPON_FONT_FILE = os.path.join(os.getcwd(), "fonts", "weapon_font.ttf")
 
 CHEAT_SETTINGS = {
     "EnableAntiFlashbang": False,
@@ -42,13 +44,26 @@ CHEAT_SETTINGS = {
     "EnableESPHealthBarRendering": True,
     "EnableESPHealthText": False,
     "EnableESPDistanceText": False,
+    "EnableESPHeadCircle": True,
+    "EnableESPBoxFill": False,
+    "EnableESPArmorText": False,
+    "EnableESPMoneyText": False,
+    "EnableESPWeaponText": False,
+    "EnableESPFlagsText": False,
     "EnableFOVCircle": True,
 
+    "ESPBoxStyle": "Full",
+    "ESPBoxThickness": 1.0,
+    "ESPSkeletonThickness": 1.0,
+    "ESPBoxFillAlpha": 0.25,
+
     "EnableESPBombTimer": False,
+    "EnableESPGrenadeTimers": False,
     
     "CT_color": "#0000FF",
     "T_color": "#FF0000",
     "FOV_color": "#FFFFFF",
+    "BoxFill_color": "#000000",
 
     "EnableBhop": False,
 
