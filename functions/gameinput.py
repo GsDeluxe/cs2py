@@ -6,6 +6,7 @@ import serial
 from ext.datatypes import *
 from functions import calculations
 from globals import *
+import globals
 
 def LeftClick():
     time.sleep(random.randint(10, 30) / 1000.0)
@@ -23,7 +24,7 @@ def moveMouseToLocation(pos: Vector2):
     if pos.x < 0.0 and pos.y < 0.0:
         return
 
-    center_of_screen = Vector2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0)
+    center_of_screen = Vector2(globals.SCREEN_X + globals.SCREEN_WIDTH / 2.0, globals.SCREEN_Y + globals.SCREEN_HEIGHT / 2.0)
     dx = int(pos.x - center_of_screen.x)
     dy = int(pos.y - center_of_screen.y)
 
@@ -39,7 +40,7 @@ def moveMouseToLocationArdunio(pos: Vector2, handle=None):
     if pos.x < 0.0 and pos.y < 0.0:
         return
 
-    center_of_screen = Vector2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0)
+    center_of_screen = Vector2(globals.SCREEN_X + globals.SCREEN_WIDTH / 2.0, globals.SCREEN_Y + globals.SCREEN_HEIGHT / 2.0)
 
     dx = int(pos.x - center_of_screen.x)
     dy = int(pos.y - center_of_screen.y)

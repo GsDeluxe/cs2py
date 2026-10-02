@@ -186,7 +186,7 @@ def Aimbot_Update(processHandle, clientBaseAddress, Offsets, Options, ARDUINO_HA
 
 				screenCenter = Vector2(globals.SCREEN_WIDTH / 2, globals.SCREEN_HEIGHT / 2)
 				pixelDist = calculations.distance_vec2(head2d, screenCenter)
-				if pixelDist >= Options["AimbotFOV"]:
+				if pixelDist >= Options["AimbotFOV"] * globals.SCREEN_HEIGHT / 1080:
 					continue
 
 				entityDist = calculations.distance_vec3(origin, localOrigin)
@@ -218,8 +218,8 @@ def Aimbot_Update(processHandle, clientBaseAddress, Offsets, Options, ARDUINO_HA
 				else:
 					punch = Vector3(0.0, 0.0, 0.0)
 
-				punchX = punch.x * 12.0
-				punchY = punch.y * 12.0
+				punchX = punch.x * 12.0 * globals.SCREEN_HEIGHT / 1080
+				punchY = punch.y * 12.0 * globals.SCREEN_HEIGHT / 1080
 				recoilSmooth = max(1.0, min(float(Options["RecoilControlSmoothing"]), 3.0))
 				punchX /= recoilSmooth
 				punchY /= recoilSmooth
@@ -234,8 +234,8 @@ def Aimbot_Update(processHandle, clientBaseAddress, Offsets, Options, ARDUINO_HA
 			sensitivityBase = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwSensitivity)
 			sensitivity = memfuncs.ProcMemHandler.ReadFloat(processHandle, sensitivityBase + Offsets.offset.dwSensitivity_sensitivity)
 
-			deltaX = (bestEntity2D.x - crosshairX) / sensitivity
-			deltaY = (bestEntity2D.y - crosshairY) / sensitivity
+			deltaX = (bestEntity2D.x - crosshairX) / sensitivity * 1080 / globals.SCREEN_HEIGHT
+			deltaY = (bestEntity2D.y - crosshairY) / sensitivity * 1080 / globals.SCREEN_HEIGHT
 
 			stepFactor = 1.0 / Options["AimbotSmoothing"]
 			moveX = deltaX * stepFactor

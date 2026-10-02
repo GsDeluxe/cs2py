@@ -142,6 +142,14 @@ def draw_grenade_timer(pme, label, time_left, duration, x, y, color, font_size=1
 	pme.draw_rectangle(x - bar_width / 2, y + font_size + 2, bar_width * min(1.0, time_left / duration), 3, color=pme.get_color(color))
 
 
+def UpdateScreenBounds(hwnd):
+	client_width, client_height = win32gui.GetClientRect(hwnd)[2:]
+	client_x, client_y = win32gui.ClientToScreen(hwnd, (0, 0))
+	if client_width > 1 and client_height > 1 and (client_x, client_y, client_width, client_height) != (globals.SCREEN_X, globals.SCREEN_Y, globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT):
+		globals.SCREEN_X, globals.SCREEN_Y, globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT = client_x, client_y, client_width, client_height
+		pme.set_window_position(client_x, client_y)
+		pme.set_window_size(client_width - 1, client_height - 1)
+
 def GetEntityFromHandle(processHandle, ListEntries, handle):
 	ListEntry = ListEntries[(handle & 0x7FFF) >> 9]
 	if not ListEntry:
@@ -223,9 +231,11 @@ def DrawGrenadeTimers(processHandle, clientBaseAddress, ListEntries, viewMatrix,
 
 def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombState):
 	global lastLocalController
-	if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != "Counter-Strike 2":
+	foregroundWindow = win32gui.GetForegroundWindow()
+	if win32gui.GetWindowText(foregroundWindow) != "Counter-Strike 2":
 			pme.end_drawing()
 			return
+	UpdateScreenBounds(foregroundWindow)
 
 	try:
 		localPlayerEnt_pawnAddress = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwLocalPlayerPawn)
@@ -234,6 +244,7 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 		localPlayerEnt_origin = memfuncs.ProcMemHandler.ReadVec(processHandle, localPlayerEnt_pawnAddress + Offsets.offset.m_vOldOrigin)
 
 		viewMatrix = memfuncs.ProcMemHandler.ReadMatrix(processHandle, clientBaseAddress + Offsets.offset.dwViewMatrix)
+		pixelAspect = (globals.SCREEN_WIDTH * math.hypot(*viewMatrix.matrix[0][:3])) / (globals.SCREEN_HEIGHT * math.hypot(*viewMatrix.matrix[1][:3]))
 		EntityList = memfuncs.ProcMemHandler.ReadPointer(processHandle, clientBaseAddress + Offsets.offset.dwEntityList)
 		ListEntries = struct.unpack("64Q", memfuncs.ProcMemHandler.ReadBytes(processHandle, EntityList + 0x10, 64 * 8))
 		Controllers = memoryview(memfuncs.ProcMemHandler.ReadBytes(processHandle, ListEntries[0], 65 * 0x70)).cast("Q")[::14].tolist()
@@ -286,9 +297,9 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 				continue
 
 			box_height = screen_feet.y - box_top.y
-			rect_left = screen_feet.x - box_height / 4
+			rect_width = box_height / 2 * pixelAspect
+			rect_left = screen_feet.x - rect_width / 2
 			rect_top = box_top.y
-			rect_width = box_height / 2
 			rect_height = box_height
 			rect_center_x = rect_left + rect_width / 2
 			rect_center_y = rect_top + rect_height / 2
@@ -377,7 +388,7 @@ def ESP_Update(processHandle, clientBaseAddress, Options, Offsets, SharedBombSta
 			pass
 
 	if Options["EnableFOVCircle"]:
-		pme.draw_circle_lines(globals.SCREEN_WIDTH // 2, globals.SCREEN_HEIGHT // 2, Options["AimbotFOV"], pme.get_color(Options["FOV_color"]))
+		pme.draw_circle_lines(globals.SCREEN_WIDTH // 2, globals.SCREEN_HEIGHT // 2, Options["AimbotFOV"] * globals.SCREEN_HEIGHT / 1080, pme.get_color(Options["FOV_color"]))
 
 	try:
 		if Options["EnableESPBombTimer"]:

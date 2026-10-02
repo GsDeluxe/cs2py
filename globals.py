@@ -2,7 +2,12 @@ import win32api
 from ext import offsets
 from ext.datatypes import *
 import os
+import ctypes
 
+ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+
+SCREEN_X = 0
+SCREEN_Y = 0
 SCREEN_WIDTH = win32api.GetSystemMetrics(0)
 SCREEN_HEIGHT = win32api.GetSystemMetrics(1)
 

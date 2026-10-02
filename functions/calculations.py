@@ -1,6 +1,7 @@
 import math
 from ext.datatypes import *
 from globals import *
+import globals
 
 def distance_vec3(v: Vector3, other: Vector3):
 	return float(math.fabs(float(v.x) - float(other.x)) + math.fabs(float(v.y) - float(other.y)) + math.fabs(float(v.z) - float(other.z)))
@@ -25,8 +26,8 @@ def world_to_screen(view_matrix: Matrix, position: Vector3):
     screen_x *= invw
     screen_y *= invw
     
-    width_float = float(SCREEN_WIDTH)
-    height_float = float(SCREEN_HEIGHT)
+    width_float = float(globals.SCREEN_WIDTH)
+    height_float = float(globals.SCREEN_HEIGHT)
 
     x = (width_float / 2.0) + (0.5 * screen_x * width_float) + 0.5
     y = (height_float / 2.0) - (0.5 * screen_y * height_float) + 0.5
