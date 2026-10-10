@@ -13,7 +13,7 @@ def GetModuleBase(modulename: str, process_object: pymem.Pymem):
         return None
     module = module_from_name(process_object.process_handle, modulename)
     if module:
-        return module.lpBaseOfDll
+        return module.lpBaseOfDll, module.SizeOfImage
     return None
 
 class ProcMemHandler:

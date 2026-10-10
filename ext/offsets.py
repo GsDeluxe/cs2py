@@ -1,7 +1,156 @@
 from dataclasses import dataclass
-import os
-import json
-import requests
+import struct
+
+from functions.memfuncs import ProcMemHandler, GetModuleBase
+
+SCHEMA_SYSTEM_PATTERN = "4C 8D 35 ? ? ? ? 0F 28 45"
+BUTTON_LIST_PATTERN = "48 8B 15 ? ? ? ? 48 85 D2 74 ? 48 8B 02 48 85 C0"
+
+CLIENT_PATTERNS = {
+	"dwPrediction": ("48 8D 05 ? ? ? ? C3 CC CC CC CC CC CC CC CC 40 53 56 41 54", "Rip", 3, 0, None),
+	"dwViewMatrix": ("48 8D 0D ? ? ? ? 48 C1 E0 06", "Rip", 3, 0, None),
+	"dwLocalPlayerPawn": ("4C 39 B6 ? ? ? ? 74 ? 44 88 BE", "Imm32", 3, 0, "dwPrediction"),
+	"dwLocalPlayerController": ("48 8B 05 ? ? ? ? 41 89 BE", "Rip", 3, 0, None),
+	"dwEntityList": ("48 89 0D ? ? ? ? E9 ? ? ? ? CC", "Rip", 3, 0, None),
+	"dwGameRules": ("F6 C1 01 0F 85 ? ? ? ? 4C 8B 05 ? ? ? ? 4D 85", "Rip", 12, 0, None),
+	"dwSensitivity": ("48 8D 0D ? ? ? ? 0F 57 C9 0F 28 F0", "Rip", 3, 8, None),
+	"dwGlobalVars": ("48 89 15 ? ? ? ? 48 89 42", "Rip", 3, 0, None),
+	"dwPlantedC4": ("48 8B 1D ? ? ? ? 45 32 F6", "Rip", 3, 0, None),
+}
+
+def ScanPattern(buffer, pattern):
+	signature = [None if token in ("?", "??") else int(token, 16) for token in pattern.split()]
+
+	chunks = []
+	chunkStart = None
+	for index, byte in enumerate(signature + [None]):
+		if byte is not None and chunkStart is None:
+			chunkStart = index
+		elif byte is None and chunkStart is not None:
+			chunks.append((chunkStart, bytes(signature[chunkStart:index])))
+			chunkStart = None
+
+	anchorOffset, anchor = max(chunks, key=lambda chunk: len(chunk[1]))
+	searchFrom = anchorOffset
+
+	while True:
+		found = buffer.find(anchor, searchFrom)
+		if found < 0:
+			return -1
+
+		start = found - anchorOffset
+		if start + len(signature) > len(buffer):
+			return -1
+
+		if start >= 0 and all(buffer[start + offset:start + offset + len(chunk)] == chunk for offset, chunk in chunks):
+			return start
+		searchFrom = found + 1
+
+def Extract(buffer, index, kind, position, extra=0):
+	if kind == "Rip":
+		return index + position + 4 + struct.unpack_from("<i", buffer, index + position)[0] + extra
+	return (struct.unpack_from("<I", buffer, index + position)[0] + extra) & 0xFFFFFFFF
+
+def DumpOffsets(ClientBuffer):
+	result = {"dwSensitivity_sensitivity": 0x58}
+
+	for name, (pattern, kind, position, extra, parent) in CLIENT_PATTERNS.items():
+		index = ScanPattern(ClientBuffer, pattern)
+		if index < 0 or (parent and parent not in result):
+			print(f"Pattern not found: {name}")
+			continue
+
+		result[name] = result.get(parent, 0) + Extract(ClientBuffer, index, kind, position, extra)
+
+	return result
+
+def DumpButtons(ProcessObject, ClientDLL, ClientBuffer):
+	result = {}
+
+	index = ScanPattern(ClientBuffer, BUTTON_LIST_PATTERN)
+	if index < 0:
+		print("Pattern not found: ButtonList")
+		return result
+
+	buttonPointer = ProcMemHandler.ReadPointer(ProcessObject, ClientDLL + Extract(ClientBuffer, index, "Rip", 3))
+	visited = set()
+
+	while buttonPointer and buttonPointer not in visited:
+		visited.add(buttonPointer)
+		try:
+			buttonData = ProcMemHandler.ReadBytes(ProcessObject, buttonPointer, 0x90)
+			name = ProcMemHandler.ReadString(ProcessObject, struct.unpack_from("<Q", buttonData, 0x08)[0], 32)
+			if buttonPointer + 0x30 >= ClientDLL:
+				result[name] = buttonPointer + 0x30 - ClientDLL
+			buttonPointer = struct.unpack_from("<Q", buttonData, 0x88)[0]
+		except Exception as e:
+			print(f"Failed to read button at 0x{buttonPointer:X}: {e}")
+			break
+
+	return result
+
+def ReadHashElements(ProcessObject, hashAddress):
+	elements = []
+	header = ProcMemHandler.ReadBytes(ProcessObject, hashAddress, 0x1870)
+	blocksAllocated, peakAllocated = struct.unpack_from("<ii", header, 0x0C)
+
+	for bucket in range(256):
+		nodePointer = struct.unpack_from("<Q", header, 0x60 + bucket * 0x18 + 0x10)[0]
+		while nodePointer and len(elements) < blocksAllocated:
+			nextPointer, dataPointer = struct.unpack_from("<QQ", ProcMemHandler.ReadBytes(ProcessObject, nodePointer, 0x18), 0x08)
+			if dataPointer:
+				elements.append(dataPointer)
+			nodePointer = nextPointer
+
+	blobPointer = struct.unpack_from("<Q", header, 0x20)[0]
+	for _ in range(max(peakAllocated, 0)):
+		if not blobPointer:
+			break
+		blobData = ProcMemHandler.ReadBytes(ProcessObject, blobPointer, 0x18)
+		if struct.unpack_from("<Q", blobData, 0x10)[0]:
+			elements.append(struct.unpack_from("<Q", blobData, 0x10)[0])
+		blobPointer = struct.unpack_from("<Q", blobData, 0)[0]
+
+	return list(dict.fromkeys(elements))
+
+def DumpSchemas(ProcessObject, SchemaSystemDLL, SchemaSystemDLLSize, moduleName="client.dll"):
+	result = {}
+
+	buffer = ProcMemHandler.ReadBytes(ProcessObject, SchemaSystemDLL, SchemaSystemDLLSize)
+	index = ScanPattern(buffer, SCHEMA_SYSTEM_PATTERN)
+	if index < 0:
+		print("Pattern not found: SchemaSystem")
+		return result
+
+	schemaSystem = ProcMemHandler.ReadBytes(ProcessObject, SchemaSystemDLL + Extract(buffer, index, "Rip", 3), 0x1A0)
+	scopeCount = min(max(struct.unpack_from("<i", schemaSystem, 0x190)[0], 0), 256)
+	scopesPointer = struct.unpack_from("<Q", schemaSystem, 0x198)[0]
+	scopes = struct.unpack(f"<{scopeCount}Q", ProcMemHandler.ReadBytes(ProcessObject, scopesPointer, scopeCount * 8))
+
+	for scopePointer in scopes:
+		if not scopePointer or ProcMemHandler.ReadString(ProcessObject, scopePointer + 0x08, 256) != moduleName:
+			continue
+
+		for classPointer in ReadHashElements(ProcessObject, scopePointer + 0x560):
+			try:
+				classData = ProcMemHandler.ReadBytes(ProcessObject, classPointer, 0x38)
+				className = ProcMemHandler.ReadString(ProcessObject, struct.unpack_from("<Q", classData, 0x08)[0], 128)
+				fieldCount = struct.unpack_from("<h", classData, 0x24)[0]
+				fieldsPointer = struct.unpack_from("<Q", classData, 0x30)[0]
+
+				fields = {}
+				if fieldCount > 0 and fieldsPointer:
+					fieldData = ProcMemHandler.ReadBytes(ProcessObject, fieldsPointer, fieldCount * 0x20)
+					for field in range(fieldCount):
+						fieldName = ProcMemHandler.ReadString(ProcessObject, struct.unpack_from("<Q", fieldData, field * 0x20)[0], 128)
+						fields[fieldName] = struct.unpack_from("<i", fieldData, field * 0x20 + 0x10)[0]
+
+				if className:
+					result[className] = fields
+			except Exception as e:
+				print(f"Failed to read class at 0x{classPointer:X}: {e}")
+
+	return result
 
 @dataclass
 class Offset:
@@ -9,16 +158,14 @@ class Offset:
 	dwLocalPlayerPawn: int
 	dwEntityList: int
 	dwLocalPlayerController: int
-	dwViewAngles: int
 	dwGameRules: int
 	dwSensitivity_sensitivity: int
-	dwSensitivity: int 
+	dwSensitivity: int
 	dwGlobalVars: int
 	dwPlantedC4: int
 
-
 	ButtonJump: int
-	
+
 	m_hPlayerPawn: int
 	m_iHealth: int
 	m_lifeState: int
@@ -27,7 +174,6 @@ class Offset:
 	m_pGameSceneNode: int
 	m_modelState: int
 	m_boneArray: int
-	m_nodeToWorld: int
 	m_sSanitizedPlayerName: int
 	m_iIDEntIndex: int
 	m_flFlashMaxAlpha: int
@@ -37,14 +183,14 @@ class Offset:
 	m_bIsScoped: int
 
 	m_vecViewOffset: int
-	m_entitySpottedState: int 
-	m_bSpotted: int 
+	m_entitySpottedState: int
+	m_bSpotted: int
 	m_bBombPlanted: int
-	
+
 	m_iShotsFired: int
 	m_pAimPunchServices: int
 	m_unpredictableBaseTick: int
-	
+
 	m_bSpottedByMask: int
 	m_vecVelocity: int
 
@@ -68,130 +214,86 @@ class Offset:
 	m_vSmokeDetonationPos: int
 	m_flC4Blow: int
 	m_bBombDefused: int
-	
 
+def GetOffsets(ProcessObject):
+	ClientDLL, ClientDLLSize = GetModuleBase(modulename="client.dll", process_object=ProcessObject)
+	SchemaSystemDLL, SchemaSystemDLLSize = GetModuleBase(modulename="schemasystem.dll", process_object=ProcessObject)
+	ClientBuffer = ProcMemHandler.ReadBytes(ProcessObject, ClientDLL, ClientDLLSize)
 
-class Client:
-	def __init__(self, manual_dump=False):
-		if not manual_dump:
-			self._load_from_url()
-		else:
-			self._load_from_file()
+	Offsets = DumpOffsets(ClientBuffer)
+	Buttons = DumpButtons(ProcessObject, ClientDLL, ClientBuffer)
+	Schemas = DumpSchemas(ProcessObject, SchemaSystemDLL, SchemaSystemDLLSize)
 
-	def _load_from_url(self):
-		try:
-			self.offsets = self._get_json_from_url('https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json')
-			self.clientdll = self._get_json_from_url('https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json')
-			self.buttons = self._get_json_from_url('https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/buttons.json')
-		except Exception as e:
-			print(f'Unable to get offsets: {e}')
-			exit()
-
-	def _get_json_from_url(self, url):
-		return requests.get(url).json()
-
-	def _load_from_file(self):
-		try:
-			base_path = os.path.join(os.getcwd(), 'output')
-			self.offsets = self._load_json_from_file(base_path, 'offsets.json')
-			self.clientdll = self._load_json_from_file(base_path, 'client_dll.json')
-			self.buttons = self._load_json_from_file(base_path, 'buttons.json')
-		except Exception as e:
-			print(f'Unable to load data from file: {e}')
-			exit()
-
-	def _load_json_from_file(self, base_path, filename):
-		with open(os.path.join(base_path, filename), 'r') as f:
-			return json.load(f)
-
-	def offset(self, a):
-		return self._get_value_from_dict(self.offsets, ['client.dll', a], f'Offset {a} not found.')
-
-	def get(self, a, b):
-		try:
-			return self.clientdll["client.dll"]['classes'][a]['fields'][b]
-		except KeyError as e:
-			print(f"Error with getting offset for {a} -> {b}: {e}")
-			exit()
-
-	def button(self, a):
-		return self._get_value_from_dict(self.buttons, ['client.dll', a], f'Button {a} not found.')
-
-	def _get_value_from_dict(self, data, keys, error_message):
+	def Lookup(data, *keys):
 		try:
 			for key in keys:
 				data = data[key]
 			return data
 		except KeyError:
-			print(error_message)
+			print(f"Offset not found: {' -> '.join(keys)}")
 			exit()
 
+	print(f"Dumped {len(Offsets)} offsets, {len(Buttons)} buttons and {len(Schemas)} classes")
 
-def get_offsets() -> Offset:
-	oc = Client()
-	offsets_obj = Offset(
-		dwViewMatrix=oc.offset("dwViewMatrix"),
-		dwLocalPlayerPawn=oc.offset("dwLocalPlayerPawn"),
-		dwEntityList=oc.offset("dwEntityList"),
-		dwLocalPlayerController=oc.offset("dwLocalPlayerController"),
-		dwViewAngles = oc.offset("dwViewAngles"),
-		dwGameRules = oc.offset("dwGameRules"),
-		dwSensitivity_sensitivity = oc.offset("dwSensitivity_sensitivity"),
-		dwSensitivity = oc.offset("dwSensitivity"),
-		dwGlobalVars = oc.offset("dwGlobalVars"),
-		dwPlantedC4 = oc.offset("dwPlantedC4"),
-		
+	return Offset(
+		dwViewMatrix = Lookup(Offsets, "dwViewMatrix"),
+		dwLocalPlayerPawn = Lookup(Offsets, "dwLocalPlayerPawn"),
+		dwEntityList = Lookup(Offsets, "dwEntityList"),
+		dwLocalPlayerController = Lookup(Offsets, "dwLocalPlayerController"),
+		dwGameRules = Lookup(Offsets, "dwGameRules"),
+		dwSensitivity_sensitivity = Lookup(Offsets, "dwSensitivity_sensitivity"),
+		dwSensitivity = Lookup(Offsets, "dwSensitivity"),
+		dwGlobalVars = Lookup(Offsets, "dwGlobalVars"),
+		dwPlantedC4 = Lookup(Offsets, "dwPlantedC4"),
 
-		ButtonJump=oc.button("jump"),
-		
-		m_hPlayerPawn=oc.get("CCSPlayerController", "m_hPlayerPawn"),
-		m_iHealth=oc.get("C_BaseEntity", "m_iHealth"),
-		m_lifeState=oc.get("C_BaseEntity", "m_lifeState"),
-		m_iTeamNum=oc.get("C_BaseEntity", "m_iTeamNum"),
-		m_vOldOrigin=oc.get("C_BasePlayerPawn", "m_vOldOrigin"),
-		m_pGameSceneNode=oc.get("C_BaseEntity", "m_pGameSceneNode"),
-		m_modelState=oc.get("CSkeletonInstance", "m_modelState"),
-		m_boneArray=128,
-		m_nodeToWorld=oc.get("CGameSceneNode", "m_nodeToWorld"),
-		m_sSanitizedPlayerName=oc.get("CCSPlayerController", "m_sSanitizedPlayerName"),
-		m_iIDEntIndex=oc.get("C_CSPlayerPawn", "m_iIDEntIndex"),
-		m_flFlashMaxAlpha=oc.get("C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
-		m_fFlags=oc.get("C_BaseEntity", "m_fFlags"),
-		m_iFOV=oc.get("CCSPlayerBase_CameraServices", "m_iFOV"),
-		m_pCameraServices=oc.get("C_BasePlayerPawn", "m_pCameraServices"),
-		m_bIsScoped=oc.get("C_CSPlayerPawn", "m_bIsScoped"),
-		m_vecViewOffset = oc.get("C_BaseModelEntity", "m_vecViewOffset"),
-		m_entitySpottedState = oc.get("C_CSPlayerPawn", "m_entitySpottedState"),
-		m_bSpotted = oc.get("EntitySpottedState_t", "m_bSpotted"),
-		m_bBombPlanted = oc.get("C_CSGameRules", "m_bBombPlanted"),
-		m_iShotsFired = oc.get("C_CSPlayerPawn", "m_iShotsFired"),
-		m_pAimPunchServices = oc.get("C_CSPlayerPawn", "m_pAimPunchServices"),
-		m_unpredictableBaseTick = oc.get("CCSPlayer_AimPunchServices", "m_unpredictableBaseTick"),
-		
-		m_bSpottedByMask = oc.get("EntitySpottedState_t", "m_bSpottedByMask"),
-		m_vecVelocity = oc.get("C_BaseEntity", "m_vecVelocity"),
+		ButtonJump = Lookup(Buttons, "jump"),
 
-		m_ArmorValue = oc.get("C_CSPlayerPawn", "m_ArmorValue"),
-		m_bIsDefusing = oc.get("C_CSPlayerPawn", "m_bIsDefusing"),
-		m_pInGameMoneyServices = oc.get("CCSPlayerController", "m_pInGameMoneyServices"),
-		m_iAccount = oc.get("CCSPlayerController_InGameMoneyServices", "m_iAccount"),
-		m_pWeaponServices = oc.get("C_BasePlayerPawn", "m_pWeaponServices"),
-		m_hActiveWeapon = oc.get("CPlayer_WeaponServices", "m_hActiveWeapon"),
-		m_pItemServices = oc.get("C_BasePlayerPawn", "m_pItemServices"),
-		m_bHasHelmet = oc.get("CCSPlayer_ItemServices", "m_bHasHelmet"),
-		m_bHasDefuser = oc.get("CCSPlayer_ItemServices", "m_bHasDefuser"),
-		m_AttributeManager = oc.get("C_EconEntity", "m_AttributeManager"),
-		m_Item = oc.get("C_AttributeContainer", "m_Item"),
-		m_iItemDefinitionIndex = oc.get("C_EconItemView", "m_iItemDefinitionIndex"),
-		m_iFOVStart = oc.get("CCSPlayerBase_CameraServices", "m_iFOVStart"),
+		m_hPlayerPawn = Lookup(Schemas, "CCSPlayerController", "m_hPlayerPawn"),
+		m_iHealth = Lookup(Schemas, "C_BaseEntity", "m_iHealth"),
+		m_lifeState = Lookup(Schemas, "C_BaseEntity", "m_lifeState"),
+		m_iTeamNum = Lookup(Schemas, "C_BaseEntity", "m_iTeamNum"),
+		m_vOldOrigin = Lookup(Schemas, "C_BasePlayerPawn", "m_vOldOrigin"),
+		m_pGameSceneNode = Lookup(Schemas, "C_BaseEntity", "m_pGameSceneNode"),
+		m_modelState = Lookup(Schemas, "CSkeletonInstance", "m_modelState"),
+		m_boneArray = 128,
+		m_sSanitizedPlayerName = Lookup(Schemas, "CCSPlayerController", "m_sSanitizedPlayerName"),
+		m_iIDEntIndex = Lookup(Schemas, "C_CSPlayerPawn", "m_iIDEntIndex"),
+		m_flFlashMaxAlpha = Lookup(Schemas, "C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
+		m_fFlags = Lookup(Schemas, "C_BaseEntity", "m_fFlags"),
+		m_iFOV = Lookup(Schemas, "CCSPlayerBase_CameraServices", "m_iFOV"),
+		m_pCameraServices = Lookup(Schemas, "C_BasePlayerPawn", "m_pCameraServices"),
+		m_bIsScoped = Lookup(Schemas, "C_CSPlayerPawn", "m_bIsScoped"),
 
-		m_designerName = oc.get("CEntityIdentity", "m_designerName"),
-		m_nSmokeEffectTickBegin = oc.get("C_SmokeGrenadeProjectile", "m_nSmokeEffectTickBegin"),
-		m_bDidSmokeEffect = oc.get("C_SmokeGrenadeProjectile", "m_bDidSmokeEffect"),
-		m_vSmokeDetonationPos = oc.get("C_SmokeGrenadeProjectile", "m_vSmokeDetonationPos"),
-		m_flC4Blow = oc.get("C_PlantedC4", "m_flC4Blow"),
-		m_bBombDefused = oc.get("C_PlantedC4", "m_bBombDefused"),
-		
+		m_vecViewOffset = Lookup(Schemas, "C_BaseModelEntity", "m_vecViewOffset"),
+		m_entitySpottedState = Lookup(Schemas, "C_CSPlayerPawn", "m_entitySpottedState"),
+		m_bSpotted = Lookup(Schemas, "EntitySpottedState_t", "m_bSpotted"),
+		m_bBombPlanted = Lookup(Schemas, "C_CSGameRules", "m_bBombPlanted"),
+
+		m_iShotsFired = Lookup(Schemas, "C_CSPlayerPawn", "m_iShotsFired"),
+		m_pAimPunchServices = Lookup(Schemas, "C_CSPlayerPawn", "m_pAimPunchServices"),
+		m_unpredictableBaseTick = Lookup(Schemas, "CCSPlayer_AimPunchServices", "m_unpredictableBaseTick"),
+
+		m_bSpottedByMask = Lookup(Schemas, "EntitySpottedState_t", "m_bSpottedByMask"),
+		m_vecVelocity = Lookup(Schemas, "C_BaseEntity", "m_vecVelocity"),
+
+		m_ArmorValue = Lookup(Schemas, "C_CSPlayerPawn", "m_ArmorValue"),
+		m_bIsDefusing = Lookup(Schemas, "C_CSPlayerPawn", "m_bIsDefusing"),
+		m_pInGameMoneyServices = Lookup(Schemas, "CCSPlayerController", "m_pInGameMoneyServices"),
+		m_iAccount = Lookup(Schemas, "CCSPlayerController_InGameMoneyServices", "m_iAccount"),
+		m_pWeaponServices = Lookup(Schemas, "C_BasePlayerPawn", "m_pWeaponServices"),
+		m_hActiveWeapon = Lookup(Schemas, "CPlayer_WeaponServices", "m_hActiveWeapon"),
+		m_pItemServices = Lookup(Schemas, "C_BasePlayerPawn", "m_pItemServices"),
+		m_bHasHelmet = Lookup(Schemas, "CCSPlayer_ItemServices", "m_bHasHelmet"),
+		m_bHasDefuser = Lookup(Schemas, "CCSPlayer_ItemServices", "m_bHasDefuser"),
+		m_AttributeManager = Lookup(Schemas, "C_EconEntity", "m_AttributeManager"),
+		m_Item = Lookup(Schemas, "C_AttributeContainer", "m_Item"),
+		m_iItemDefinitionIndex = Lookup(Schemas, "C_EconItemView", "m_iItemDefinitionIndex"),
+		m_iFOVStart = Lookup(Schemas, "CCSPlayerBase_CameraServices", "m_iFOVStart"),
+
+		m_designerName = Lookup(Schemas, "CEntityIdentity", "m_designerName"),
+		m_nSmokeEffectTickBegin = Lookup(Schemas, "C_SmokeGrenadeProjectile", "m_nSmokeEffectTickBegin"),
+		m_bDidSmokeEffect = Lookup(Schemas, "C_SmokeGrenadeProjectile", "m_bDidSmokeEffect"),
+		m_vSmokeDetonationPos = Lookup(Schemas, "C_SmokeGrenadeProjectile", "m_vSmokeDetonationPos"),
+		m_flC4Blow = Lookup(Schemas, "C_PlantedC4", "m_flC4Blow"),
+		m_bBombDefused = Lookup(Schemas, "C_PlantedC4", "m_bBombDefused"),
 	)
-	return offsets_obj
-

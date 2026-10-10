@@ -11,7 +11,7 @@ import time
 def FovChangerThreadFunction(Options, Offsets):
 
 	processHandle = memfuncs.GetProcess("cs2.exe")
-	clientBaseAddress = memfuncs.GetModuleBase(modulename="client.dll", process_object=processHandle)
+	clientBaseAddress, _ = memfuncs.GetModuleBase(modulename="client.dll", process_object=processHandle)
 
 	FovOptions = Options.copy()
 	lastOptionsUpdate = time.perf_counter()

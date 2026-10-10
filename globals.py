@@ -1,5 +1,4 @@
 import win32api
-from ext import offsets
 from ext.datatypes import *
 import os
 import ctypes
@@ -12,7 +11,7 @@ SCREEN_WIDTH = win32api.GetSystemMetrics(0)
 SCREEN_HEIGHT = win32api.GetSystemMetrics(1)
 
 
-GAME_OFFSETS = offsets.get_offsets()
+GAME_OFFSETS = None
 
 SAVE_FILE = os.path.join(os.getcwd(), "settings.json")
 FONT_FILE = os.path.join(os.getcwd(), "fonts", "font.ttf")

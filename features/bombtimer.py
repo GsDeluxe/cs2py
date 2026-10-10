@@ -14,7 +14,7 @@ def BombTimerThread(SharedBombState, SharedOffsets):
                 time.sleep(1)
                 continue
 
-            clientBaseAddress = memfuncs.GetModuleBase(modulename="client.dll", process_object=processHandle)
+            clientBaseAddress, _ = memfuncs.GetModuleBase(modulename="client.dll", process_object=processHandle)
             if not clientBaseAddress:
                 SharedBombState.bombPlanted = False
                 SharedBombState.bombTimeLeft = -1

@@ -1,4 +1,5 @@
 import globals
+from ext import offsets
 from functions import memfuncs, autoupdate
 
 from features import aimbot
@@ -104,7 +105,9 @@ if __name__ == "__main__":
 		ARDUINO_HANDLE = None
 
 	ProcessObject = memfuncs.GetProcess("cs2.exe")
-	ClientModuleAddress = memfuncs.GetModuleBase(modulename="client.dll", process_object=ProcessObject)
+	ClientModuleAddress, ClientModuleSize = memfuncs.GetModuleBase(modulename="client.dll", process_object=ProcessObject)
+
+	globals.GAME_OFFSETS = offsets.GetOffsets(ProcessObject)
 
 	LoadConfig()
 
