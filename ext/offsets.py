@@ -13,9 +13,9 @@ CLIENT_PATTERNS = {
 	"dwLocalPlayerController": ("48 8B 05 ? ? ? ? 41 89 BE", "Rip", 3, 0, None),
 	"dwEntityList": ("48 89 0D ? ? ? ? E9 ? ? ? ? CC", "Rip", 3, 0, None),
 	"dwGameRules": ("F6 C1 01 0F 85 ? ? ? ? 4C 8B 05 ? ? ? ? 4D 85", "Rip", 12, 0, None),
-	"dwSensitivity": ("48 8D 0D ? ? ? ? 0F 57 C9 0F 28 F0", "Rip", 3, 8, None),
+    "dwSensitivity": ("48 8B 05 ? ? 8B 70 58 EB ? 8B F5 33 C9 E8", "Rip", 3, 0, None),
 	"dwGlobalVars": ("48 89 15 ? ? ? ? 48 89 42", "Rip", 3, 0, None),
-	"dwPlantedC4": ("48 8B 1D ? ? ? ? 45 32 F6", "Rip", 3, 0, None),
+    "dwPlantedC4": ("48 8B 05 ? ? 45 32 C0 48 85 C0 74 ? 44 38 80", "Rip", 3, 0, None),
 }
 
 def ScanPattern(buffer, pattern):
