@@ -7,15 +7,15 @@ SCHEMA_SYSTEM_PATTERN = "4C 8D 35 ? ? ? ? 0F 28 45"
 BUTTON_LIST_PATTERN = "48 8B 15 ? ? ? ? 48 85 D2 74 ? 48 8B 02 48 85 C0"
 
 CLIENT_PATTERNS = {
-	"dwPrediction": ("48 8D 05 ? ? ? ? C3 CC CC CC CC CC CC CC CC 40 53 56 41 54", "Rip", 3, 0, None),
-	"dwViewMatrix": ("48 8D 0D ? ? ? ? 48 C1 E0 06", "Rip", 3, 0, None),
-	"dwLocalPlayerPawn": ("4C 39 B6 ? ? ? ? 74 ? 44 88 BE", "Imm32", 3, 0, "dwPrediction"),
-	"dwLocalPlayerController": ("48 8B 05 ? ? ? ? 41 89 BE", "Rip", 3, 0, None),
-	"dwEntityList": ("48 89 0D ? ? ? ? E9 ? ? ? ? CC", "Rip", 3, 0, None),
-	"dwGameRules": ("F6 C1 01 0F 85 ? ? ? ? 4C 8B 05 ? ? ? ? 4D 85", "Rip", 12, 0, None),
-    "dwSensitivity": ("48 8B 05 ? ? 8B 70 58 EB ? 8B F5 33 C9 E8", "Rip", 3, 0, None),
-	"dwGlobalVars": ("48 89 15 ? ? ? ? 48 89 42", "Rip", 3, 0, None),
-    "dwPlantedC4": ("48 8B 05 ? ? 45 32 C0 48 85 C0 74 ? 44 38 80", "Rip", 3, 0, None),
+    "dwPrediction": ("48 8D 05 ? ? ? ? C3 CC CC CC CC CC CC CC CC 40 53 56 41 54", "Rip", 3, 0, None),
+    "dwViewMatrix": ("48 8D 0D ? ? ? ? 48 C1 E0 06", "Rip", 3, 0, None),
+    "dwLocalPlayerPawn": ("4C 39 B6 ? ? ? ? 74 ? 44 88 BE", "Imm32", 3, 0, "dwPrediction"),
+    "dwLocalPlayerController": ("48 8B 05 ? ? ? ? 41 89 BE", "Rip", 3, 0, None),
+    "dwEntityList": ("48 89 0D ? ? ? ? E9 ? ? ? ? CC", "Rip", 3, 0, None),
+    "dwGameRules": ("F6 C1 01 0F 85 ? ? ? ? 4C 8B 05 ? ? ? ? 4D 85", "Rip", 12, 0, None),
+    "dwSensitivity": ("48 8D 0D ? ? ? ? 0F 57 C9 0F 28 F0", "Rip", 3, 8, None),
+    "dwGlobalVars": ("48 89 15 ? ? ? ? 48 89 42", "Rip", 3, 0, None),
+    "dwPlantedC4": ("48 8B 05 ? ? ? ? 45 32 C0 48 85 C0 74 ? 44 38 80", "Rip", 3, 0, None)
 }
 
 def ScanPattern(buffer, pattern):
